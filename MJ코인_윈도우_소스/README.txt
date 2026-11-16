@@ -14,11 +14,11 @@ MJ코인 소스 (2026-11-16)
 폴더 (각 zip에 하나씩)
 ----------------------
 windows/  윈도우 판 (창: pywebview + Edge WebView2, 윈도우 10/11 기본 포함)
-  - mj_coin_win.py : 창, 업비트·네이버 요청(urllib), 실시간 연결(websocket-client), 알림(PowerShell 토스트, 오른쪽 아래)
+  - mj_coin_win.py : 창, 업비트·네이버 요청(urllib), 실시간 연결(websocket-client), 알림(windows-toasts 라이브러리, 오른쪽 아래. 예전 PowerShell 방식은 맥아피가 악성으로 오인해 바꿈)
   - run.bat : 바로 실행 (파이썬 3.10 이상 필요, 설치 시 "Add python.exe to PATH" 체크)
-  - build.bat : dist\MJCoin.exe 만들기
+  - build.bat : dist\MJCoin\MJCoin.exe 만들기 (폴더형. 한 파일형은 백신에 더 잘 걸림)
   - build_installer.bat + mjcoin.nsi : exe + 설치 파일 dist\MJCoin_Setup.exe (NSIS 3, 없으면 winget으로 설치 시도)
-  - 알림 이름: 프로그램이 HKCU\Software\Classes\AppUserModelId\kmj.MJCoin 에 "MJ코인" 등록 후 사용 (실패하면 PowerShell 이름)
+  - 알림 이름: 프로그램이 HKCU\Software\Classes\AppUserModelId\kmj.MJCoin 에 "MJ코인" 등록 후 사용 (실패하면 명령 프롬프트 이름)
   - 오류 기록: %LOCALAPPDATA%\MJCoin\mjcoin.log
 macos/    맥 판 (창: pywebview + 맥 기본 WebKit)
   - mj_coin_mac.py : 윈도우판과 같고 알림만 osascript(오른쪽 위)
@@ -47,6 +47,8 @@ bazzite/  리눅스(바지트) 판 (창: GTK4 + WebKit6, 네트워크: libsoup)
 - 바지트판: 실제로 사용 중, 화면 캡처로 확인.
 - 윈도우판: 바지트에서 Proton(wine) + 윈도우 파이썬 3.12.10(NuGet판) + PyInstaller 6.22.3 + pywebview 6.2.1 + NSIS 3.11 로 빌드.
   설치/제거는 wine에서 시험 OK. 네트워크 부분은 리눅스에서 가짜 창으로 시험 OK. 실제 윈도우 창·알림은 아직 미시험.
+  깃허브 빌드: 저장소의 .github/workflows/windows.yml 이 윈도우 PC에서 설치 파일을 만들어
+  https://github.com/alswls01/mjcoin/releases/tag/windows-build 에 올림
 - 맥판: 네트워크 부분만 리눅스에서 가짜 창으로 시험 OK. 맥 실기 미시험.
 안 되면 오류 기록(mjcoin.log)과 화면 오류를 보고 고치면 됨.
 

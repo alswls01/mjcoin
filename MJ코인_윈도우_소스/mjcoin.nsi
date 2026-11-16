@@ -1,4 +1,4 @@
-﻿; MJ코인 설치 파일 (NSIS 3)  - build_installer.bat 가 사용
+﻿; MJ코인 설치 파일 (NSIS 3). build_installer.bat 와 깃허브 빌드가 사용
 Unicode true
 !include "MUI2.nsh"
 Name "MJ코인"
@@ -19,7 +19,7 @@ SetCompressor /SOLID lzma
 
 Section "MJ코인"
   SetOutPath "$INSTDIR"
-  File "dist\MJCoin.exe"
+  File /r "dist\MJCoin\*.*"
   File "mjcoin.ico"
   CreateShortcut "$SMPROGRAMS\MJ코인.lnk" "$INSTDIR\MJCoin.exe" "" "$INSTDIR\mjcoin.ico"
   CreateShortcut "$DESKTOP\MJ코인.lnk" "$INSTDIR\MJCoin.exe" "" "$INSTDIR\mjcoin.ico"
@@ -36,6 +36,7 @@ SectionEnd
 
 Section "Uninstall"
   Delete "$INSTDIR\MJCoin.exe"
+  RMDir /r "$INSTDIR\_internal"
   Delete "$INSTDIR\mjcoin.ico"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"

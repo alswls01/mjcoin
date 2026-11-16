@@ -3,9 +3,9 @@ chcp 65001 >nul
 rem MJ코인 윈도우 exe 만들기 (파이썬 3.10 이상이 설치되어 있어야 함: https://www.python.org)
 cd /d "%~dp0"
 python -m pip install --upgrade -r requirements.txt || goto err
-python -m PyInstaller --noconfirm --onefile --windowed --name MJCoin --icon mjcoin.ico --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
+python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
 echo.
-echo 완료: dist\MJCoin.exe
+echo 완료: dist\MJCoin\MJCoin.exe
 explorer dist
 pause
 exit /b 0

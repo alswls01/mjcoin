@@ -5,7 +5,7 @@ rem 필요: 파이썬 3.10 이상 (python.org, 설치할 때 "Add python.exe to 
 rem NSIS 가 없으면 winget 으로 설치를 시도함
 cd /d "%~dp0"
 python -m pip install --upgrade -r requirements.txt || goto err
-python -m PyInstaller --noconfirm --onefile --windowed --name MJCoin --icon mjcoin.ico --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
+python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
 set "MAKENSIS=%ProgramFiles(x86)%\NSIS\makensis.exe"
 if not exist "%MAKENSIS%" (
   echo NSIS 설치 중...
@@ -14,7 +14,7 @@ if not exist "%MAKENSIS%" (
 if not exist "%MAKENSIS%" ( echo NSIS 를 찾을 수 없어요. https://nsis.sourceforge.io 에서 설치 후 다시 실행하세요. & goto err )
 "%MAKENSIS%" mjcoin.nsi || goto err
 echo.
-echo 완료: dist\MJCoin_Setup.exe  (설치 파일)   dist\MJCoin.exe  (설치 없이 실행)
+echo 완료: dist\MJCoin_Setup.exe  (설치 파일)   dist\MJCoin\MJCoin.exe  (설치 없이 실행)
 explorer dist
 pause
 exit /b 0

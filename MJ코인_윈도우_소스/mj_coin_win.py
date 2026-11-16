@@ -2,7 +2,7 @@
 # 화면은 web/index.html (바지트판과 같은 파일), 창은 pywebview(Edge WebView2)
 # 인터넷 요청과 실시간 연결은 파이썬이 처리해서 화면에 넘겨 줌 (화면에서 업비트로 직접 요청하면 429로 막힌 적 있음)
 # 다이버전스 알림은 윈도우 기본 알림(화면 오른쪽 아래)으로 띄움
-import os, sys, json, threading, time, base64, subprocess, urllib.request, urllib.error
+import os, sys, json, threading, time, urllib.request, urllib.error
 import webview, websocket
 
 BASE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -77,27 +77,13 @@ OUT = JsOut()
 
 
 # ---------- 윈도우 알림 (오른쪽 아래) ----------
-TOAST_PS = r"""
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-$x = New-Object Windows.Data.Xml.Dom.XmlDocument
-$x.LoadXml("<toast><visual><binding template='ToastGeneric'><text></text><text></text></binding></visual><audio src='ms-winsoundevent:Notification.Default'/></toast>")
-$n = $x.GetElementsByTagName('text')
-$n.Item(0).AppendChild($x.CreateTextNode($env:MJ_TITLE)) | Out-Null
-$n.Item(1).AppendChild($x.CreateTextNode($env:MJ_BODY)) | Out-Null
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($env:MJ_APPID).Show([Windows.UI.Notifications.ToastNotification]::new($x))
-"""
-
-
-PS_APPID = r"{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe"
-
-
+# PowerShell 을 숨겨 실행하던 방식은 백신이 악성으로 오인해서 windows-toasts 라이브러리로 바꿈
 APP_ID = "kmj.MJCoin"
 _app_id = None
 
 
 def app_id():
-    # 알림이 "MJ코인" 이름·아이콘으로 뜨도록 사용자 레지스트리(HKCU)에 앱 ID 등록. 실패하면 PowerShell 이름으로 띄움
+    # 알림이 "MJ코인" 이름·아이콘으로 뜨도록 사용자 레지스트리(HKCU)에 앱 ID 등록. 실패하면 명령 프롬프트 이름으로 띄움
     global _app_id
     if _app_id:
         return _app_id
@@ -115,19 +101,14 @@ def app_id():
         _app_id = APP_ID
     except Exception as e:
         log("알림 앱 ID 등록 실패:", e)
-        _app_id = PS_APPID
+        _app_id = None   # 등록 실패하면 라이브러리 기본값(명령 프롬프트 이름)으로 띄움
     return _app_id
 
 
 def toast(title, body):
     try:
-        env = dict(os.environ, MJ_TITLE=title, MJ_BODY=body, MJ_APPID=app_id())
-        enc = base64.b64encode(TOAST_PS.encode("utf-16-le")).decode()
-        r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                            "-EncodedCommand", enc], env=env, capture_output=True, timeout=20,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if r.returncode != 0:
-            log("알림 실패:", r.stderr.decode("utf-8", "replace")[:500])
+        from windows_toasts import InteractableWindowsToaster, Toast
+        InteractableWindowsToaster("MJ코인", notifierAUMID=app_id()).show_toast(Toast(text_fields=[title, body]))
     except Exception as e:
         log("알림 오류:", e)
 
