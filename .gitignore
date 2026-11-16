@@ -1,0 +1,9 @@
+# 소스 폴더와 내용이 같은 압축본
+*.zip
+# 파이썬 가상환경과 빌드 결과물
+.venv/
+__pycache__/
+build/
+dist/
+*.spec
+.DS_Store

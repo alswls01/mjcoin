@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MJ코인
+Comment=업비트 실시간 시세 (비트코인·이더리움·리플·비트코인캐시)
+Exec=/home/kmj/.local/share/mj-coin/mj_coin.py
+Icon=office-chart-line
+Terminal=false
+Categories=Finance;Utility;
+StartupWMClass=io.github.kmj.MJCoin
