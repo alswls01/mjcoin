@@ -323,11 +323,16 @@
   #ind .irows { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
   #ind .irow { display:flex; gap:6px; }
   #ind .irow .ic { flex:1; }
-  #ind .ic { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:5px 8px; min-width:0; font-variant-numeric:tabular-nums; }
+  #ind .ic { position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:5px 8px; min-width:0; font-variant-numeric:tabular-nums; }
   #ind .it { font-size:11.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #ind .iv { font-size:15px; font-weight:700; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #ind .iv small { font-size:12px; font-weight:600; margin-left:4px; }
   #ind .is { font-size:11px; color:var(--dim); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ind .irf { position:absolute; top:3px; right:4px; width:18px; height:18px; padding:0; border:none; border-radius:4px; background:transparent; color:var(--dim); font-size:13px; line-height:18px; cursor:pointer; opacity:.45; }
+  #ind .ic:hover .irf { opacity:1; } #ind .irf:hover { background:var(--line); color:var(--text); }
+  #ind .irf.ld { opacity:1; animation:irfspin .7s linear infinite; } @keyframes irfspin { to { transform:rotate(360deg); } }
+  #ind .ic .it { padding-right:16px; } #ind .ifx .fr:first-child { padding-right:16px; }
+  body.excel #ind .irf { top:1px; right:2px; width:16px; height:16px; line-height:16px; font-size:12px; border-radius:0; } body.excel #ind .irf:hover { background:#d2e8db; }
   #ind .gbar { position:relative; height:4px; border-radius:3px; margin-top:4px; overflow:hidden; display:flex; }
   #ind .gbar.fg { background:linear-gradient(to right, #3b82f6, #22c55e 50%, #ef4f4f); overflow:visible; }
   #ind .gbar.fg i { position:absolute; top:-3px; width:3px; height:10px; border-radius:2px; background:var(--text); transform:translateX(-1px); }
@@ -1771,10 +1776,10 @@ async function indKP() {
     set("i-kp", `<span class="${cls(kp)}">${sgn(kp, 2)}%</span>`, `환율 ${n2(r, 1)}원 · 바이낸스 $${n2(u, 0)}`);
   } catch (e) { fail("i-kp"); }
 }
-async function indMVRV() {   // 무료 자료는 시간당 10번까지라 6시간 동안 저장해 둔 값을 씀
+async function indMVRV(force) {   // 무료 자료는 시간당 10번까지라 6시간 동안 저장해 둔 값을 씀 (force: 새로고침 단추)
   try {
     let d = null;
-    try { const c = JSON.parse(localStorage.getItem("mjMVRV")); if (c && Date.now() - c.at < 6 * 3600e3) d = c.d; } catch (e) {}
+    if (!force) try { const c = JSON.parse(localStorage.getItem("mjMVRV")); if (c && Date.now() - c.at < 6 * 3600e3) d = c.d; } catch (e) {}
     if (!d) {
       try { d = await nativeGet("https://api.bitcoin-data.com/v1/mvrv/last"); if (!isFinite(+d.mvrv)) throw 0; try { localStorage.setItem("mjMVRV", JSON.stringify({ at:Date.now(), d })); } catch (e) {} }
       catch (e) { const c = JSON.parse(localStorage.getItem("mjMVRV") || "null"); if (!c) throw e; d = c.d; }   // 실패하면 오래된 값이라도
@@ -1835,6 +1840,19 @@ const indAll = () => { indLS("i-ls", "globalLongShortAccountRatio"); indLS("i-to
   indNaver("i-nq", "https://api.stock.naver.com/index/.IXIC/basic", ""); indNaver("i-dxy", "https://api.stock.naver.com/marketindex/exchange/.DXY", ""); indFx(); };
 indFG(); indAll(); indMVRV(); indDom();
 setInterval(indAll, 60e3); setInterval(indFG, 10 * 60e3); setInterval(indMVRV, 6 * 3600e3); setInterval(indDom, 5 * 60e3);
+// 칸마다 새로고침 단추 (오른쪽 위 ↻). 누른 칸만 다시 받음
+const REFRESH = {
+  "i-fg": () => indFG(), "i-ls": () => indLS("i-ls", "globalLongShortAccountRatio"), "i-top": () => indLS("i-top", "topLongShortPositionRatio"),
+  "i-fund": () => indFund(), "i-oi": () => indOI(), "i-mvrv": () => indMVRV(true), "i-kp": () => indKP(), "i-cbp": () => indCBP(), "i-dom": () => indDom(),
+  "i-nq": () => indNaver("i-nq", "https://api.stock.naver.com/index/.IXIC/basic", ""), "i-dxy": () => indNaver("i-dxy", "https://api.stock.naver.com/marketindex/exchange/.DXY", ""),
+  "i-fx": () => indFx(),
+};
+Object.entries(REFRESH).forEach(([id, fn]) => {
+  const c = document.getElementById(id); if (!c) return;
+  const b = Object.assign(document.createElement("button"), { className:"irf", textContent:"↻", title:"이 칸만 새로고침" + (id === "i-mvrv" ? " (무료 자료라 시간당 10번까지)" : "") });
+  b.onclick = async e => { e.stopPropagation(); if (b.classList.contains("ld")) return; b.classList.add("ld"); try { await fn(); } finally { setTimeout(() => b.classList.remove("ld"), 400); } };
+  c.appendChild(b);
+});
 }
 
 { // ---------- 그리기 도구 (업비트 차트 도구처럼) ----------
