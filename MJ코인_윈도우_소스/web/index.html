@@ -79,6 +79,15 @@
     font-size:11.5px; text-align:left; height:21px; font-family:inherit; cursor:pointer; }
   body.excel #bar3 button:hover { background:#d2e8db; border-color:#c4d9cc; }
   body.excel #bar3 button.on { background:#c5ddcf; border-color:#a9c9b6; }
+  /* 흑백: 엑셀 테마에서만. 차트, 지표 색, 그림까지 화면 전체를 회색으로 */
+  body.excel.mono { filter:grayscale(1); }
+  /* 흐리게: 엑셀 테마에서만, 시트 안 내용의 투명도 */
+  body.excel #cells { opacity:var(--xlAlpha, 1); }
+  body.excel #alphaBox { display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:8px; width:104px; }
+  body.excel #alphaVal { font-size:12px; color:#262626; font-variant-numeric:tabular-nums; }
+  body.excel #alphaIn { width:100px; margin:0; accent-color:#217346; cursor:pointer; }
+  body.excel #g-alpha { min-width:0; }
+  #monoBtn { display:none; } body.excel #monoBtn { display:block; }
   #bar .theme.l { border-radius:7px 0 0 7px; margin-left:6px; } #bar .theme.r { border-radius:0 7px 7px 0; margin-left:-7px; }
   body.excel #xl-formula { display:flex !important; align-items:center; height:26px; border-bottom:1px solid #d5d5d5; background:#fff; flex:none; font-size:12.5px; }
   body.excel #namebox { width:90px; border-right:1px solid #d5d5d5; height:100%; line-height:25px; padding:0 6px; }
@@ -157,6 +166,17 @@
   /* Sheet1: 빈 시트 (차트·시세·알림 글자 모두 숨김) */
   body.excel.blank #top, body.excel.blank #wrap, body.excel.blank #fx, body.excel.blank #st-info, body.excel.blank #divAlert { visibility:hidden; }
   body.excel #sel:not(.show) { display:none !important; }
+  /* Sheet1 은 진짜 엑셀 홈 탭처럼: 프로그램 칸(간격, 표시, 이동평균, 알림, 테마, 흐리게)과 지표 띠를 숨기고 엑셀 기본 칸을 보임 */
+  .bl-st { display:none; } body.excel:not(.blank) .grp.bl-only { display:none !important; }
+  body.excel.blank .bl-st { display:inline; }
+  body.excel.blank #g-tf, body.excel.blank #g-show, body.excel.blank #g-ma, body.excel.blank #g-alert, body.excel.blank #g-theme, body.excel.blank #g-alpha,
+  body.excel.blank #econ, body.excel.blank #ind, body.excel.blank #alertPop, body.excel.blank #drawSel { display:none !important; }
+  body.excel.blank #g-clip, body.excel.blank #g-font, body.excel.blank .grp.bl-only { display:flex !important; }
+  body.excel .bcol { display:flex; flex-direction:column; gap:6px; padding-top:4px; }
+  body.excel .brow { display:flex; gap:2px; align-items:center; font-size:11.5px; color:#333; white-space:nowrap; }
+  body.excel .brow .bt { margin-left:6px; }
+  body.excel .bbig { display:flex; flex-direction:column; align-items:center; text-align:center; font-size:11px; line-height:13px; color:#333; width:46px; white-space:nowrap; }
+  body.excel .bbig b { font-size:22px; line-height:30px; font-weight:400; color:#217346; }
   body.excel .grp.xl-only { display:flex !important; }
   body.excel #xl-sheets { display:flex !important; align-items:stretch; height:26px; background:#f3f3f3; border-top:1px solid #d5d5d5; flex:none; font-size:12.5px; }
   body.excel #xl-sheets .arr, body.excel #xl-sheets .plus { color:#999; padding:0 10px; line-height:25px; }
@@ -415,11 +435,17 @@
     <div class="smalls"><span>✂ 잘라내기</span><span>⧉ 복사</span><span>🖌 서식 복사</span></div><div class="cap">클립보드</div></div>
   <div class="grp xl-only" id="g-font"><div class="font"><span class="fbox">맑은 고딕</span><span class="fbox sz">11</span></div>
     <div class="font"><b class="fb">가</b><i class="fb">가</i><u class="fb">가</u><span class="fb">⊞</span><span class="fb"><u style="text-decoration-color:#ffd400;text-decoration-thickness:3px">가</u></span></div><div class="cap">글꼴</div></div>
+  <div class="grp xl-only bl-only"><div class="bcol"><div class="brow"><span class="fb">≡</span><span class="fb">☰</span><span class="fb">≣</span><span class="bt">↵ 자동 줄 바꿈</span></div><div class="brow"><span class="fb">⫷</span><span class="fb">≡</span><span class="fb">⫸</span><span class="bt">⊞ 병합하고 가운데 맞춤 ▾</span></div></div><div class="cap">맞춤</div></div>
+  <div class="grp xl-only bl-only"><div class="bcol"><span class="fbox" style="width:96px">일반 <span style="float:right">▾</span></span><div class="brow"><span class="fb">₩</span><span class="fb">%</span><span class="fb">,</span><span class="fb" style="width:28px">←.0</span><span class="fb" style="width:28px">.00→</span></div></div><div class="cap">표시 형식</div></div>
+  <div class="grp xl-only bl-only"><div class="bbig"><b>▦</b>조건부<br>서식 ▾</div><div class="bbig"><b>▤</b>표<br>서식 ▾</div><div class="bbig"><b>▣</b>셀<br>스타일 ▾</div><div class="cap">스타일</div></div>
+  <div class="grp xl-only bl-only"><div class="smalls"><span>⊕ 삽입 ▾</span><span>⊖ 삭제 ▾</span><span>▤ 서식 ▾</span></div><div class="cap">셀</div></div>
+  <div class="grp xl-only bl-only"><div class="smalls"><span>Σ 자동 합계 ▾</span><span>⬇ 채우기 ▾</span><span>◇ 지우기 ▾</span></div><div class="bbig"><b>⇅</b>정렬 및<br>필터 ▾</div><div class="cap">편집</div></div>
   <div class="grp" id="g-tf"><div id="bar"></div><div class="cap xl-only">간격</div></div>
   <div class="grp" id="g-show"><div id="bar2"></div><div class="cap xl-only">표시</div></div>
   <div class="grp" id="g-ma"><div id="maBar"></div><div class="cap xl-only">이동평균</div></div>
   <div class="grp" id="g-alert"><div id="alertList"></div><div class="cap xl-only">가격 알림</div></div>
   <div class="grp xl-only" id="g-theme"><div id="bar3"></div><div class="cap">테마</div></div>
+  <div class="grp xl-only" id="g-alpha"><div id="alphaBox"><span id="alphaVal">100%</span><input id="alphaIn" type="range" min="10" max="100" step="5" value="100" title="시트 안의 시세, 차트, 지표를 흐리게 (엑셀 틀은 그대로)"></div><div class="cap">흐리게</div></div>
 </div>
 <div id="xl-formula" class="xl-only"><div id="namebox">A1</div><div class="fxbtn">⋮ &nbsp;✕ &nbsp;✓ &nbsp;<i>fx</i></div><div id="fx"></div></div>
 <div id="sheet">
@@ -431,7 +457,7 @@
   </div>
 </div>
 <div id="xl-sheets" class="xl-only"><span class="arr">◀ ▶</span><div id="sheettabs"></div><span class="plus">⊕</span></div>
-<div id="xl-status" class="xl-only"><span>준비</span><span id="st-info"></span><span class="zoom">▦ ▣ ▤ &nbsp; − ━━━━●━━━━ + &nbsp;100%</span></div>
+<div id="xl-status" class="xl-only"><span>준비</span><span id="st-info"></span><span class="bl-st">♿ 접근성: 계속 진행 가능</span><span class="zoom">▦ ▣ ▤ &nbsp; − ━━━━●━━━━ + &nbsp;100%</span></div>
 <div id="ind"></div>
 <div id="econ"><div class="elbl" title="미국 경제지표 발표 캘린더 열기">📅 미국 지표</div><div class="evp"><div class="etr"></div></div></div>
 <div id="ecal"><div class="cbx">
@@ -1065,6 +1091,17 @@ const THEMES = {
            grid:{ vertLines:{visible:false}, horzLines:{color:"#ececec", visible:true} },
            rightPriceScale:{ borderColor:"#d9d9d9" }, timeScale:{ borderColor:"#d9d9d9" } },
 };
+// 흑백 체크 (엑셀 테마 리본 "테마" 칸, 기억해 둠)
+const monoBtn = Object.assign(document.createElement("button"), { id:"monoBtn", title:"엑셀 테마에서 화면 전체를 흑백으로" });
+let mono = false; try { mono = localStorage.getItem("mjMono") === "1"; } catch (e) {}
+const monoRefresh = () => { monoBtn.textContent = (mono ? "☑ " : "☐ ") + "흑백"; monoBtn.classList.toggle("on", mono); document.body.classList.toggle("mono", mono); };
+monoBtn.onclick = () => { mono = !mono; monoRefresh(); try { localStorage.setItem("mjMono", mono ? "1" : "0"); } catch (e) {} };
+document.getElementById("bar3").appendChild(monoBtn); monoRefresh();
+// 흐리게 막대 (엑셀 테마 리본 "흐리게" 칸, 10~100%, 기억해 둠)
+const alphaIn = document.getElementById("alphaIn"), alphaVal = document.getElementById("alphaVal");
+const alphaSet = v => { v = Math.max(10, Math.min(100, Number(v) || 100)); alphaIn.value = v; alphaVal.textContent = v + "%"; document.body.style.setProperty("--xlAlpha", v / 100); };
+try { alphaSet(localStorage.getItem("mjAlpha") || 100); } catch (e) { alphaSet(100); }
+alphaIn.oninput = () => { alphaSet(alphaIn.value); try { localStorage.setItem("mjAlpha", alphaIn.value); } catch (e) {} };
 function setTheme(on) {
   excel = on;
   document.body.classList.toggle("excel", on);
@@ -1075,6 +1112,7 @@ function setTheme(on) {
   document.title = on ? XL_TITLE : "MJ코인";
   fitXl(); updateArrows();
   themeBtns.forEach(b => { b.classList.toggle("on", b.isXl === on); (on ? document.getElementById("bar3") : bar).appendChild(b); });
+  document.getElementById("bar3").appendChild(monoBtn);   // 흑백은 테마 단추 아래
   try { localStorage.setItem("mjTheme", on ? "excel" : "dark"); } catch (e) {}
 }
 // 엑셀 테마 끄기: "보기" 탭 클릭 또는 Ctrl+Shift+X
@@ -1653,8 +1691,8 @@ indEl.innerHTML = `<div class="irows"><div class="irow">${[
   card("i-nq", "나스닥", "미국 나스닥 종합지수 (네이버 증권). 비트코인과 같이 움직이는 경우가 많음"),
   card("i-dxy", "달러 인덱스", "주요 6개 통화 대비 달러 가치 (네이버 증권, 10분 지연). 달러가 강하면 보통 코인에 불리"),
 ].join("")}</div></div>` +
-  `<div class="ic ifx" id="i-fx" title="네이버 증권. 원달러·엔화는 하나은행 고시 환율, 국제 금은 뉴욕 COMEX 선물(10분 지연), 국내 금은 한국거래소 1g">` +
-  [["usd", "원달러"], ["jpy", "엔화 100엔"], ["gold", "국제 금"], ["kgold", "국내 금"]].map(([k, n]) => `<div class="fr" data-k="${k}"><span class="fn">${n}</span><b class="fv">불러오는 중</b><small class="fc"></small></div>`).join("") + `</div>`;
+  `<div class="ic ifx" id="i-fx" title="원달러·엔화·금은 네이버 증권, 테더는 업비트 원화 시세. 원달러·엔화는 하나은행 고시 환율, 국제 금은 뉴욕 COMEX 선물(10분 지연), 국내 금은 한국거래소 1g">` +
+  [["usd", "원달러"], ["usdt", "테더 USDT"], ["jpy", "엔화 100엔"], ["gold", "국제 금"], ["kgold", "국내 금"]].map(([k, n]) => `<div class="fr" data-k="${k}"><span class="fn">${n}</span><b class="fv">불러오는 중</b><small class="fc"></small></div>`).join("") + `</div>`;
 const set = (id, v, s, extra) => { const c = document.getElementById(id); c.querySelector(".iv").innerHTML = v; c.querySelector(".is").innerHTML = s || "";
   const g = c.querySelector(".gbar"); if (g) g.remove(); if (extra) c.insertAdjacentHTML("beforeend", extra); };
 const fail = id => set(id, `<span class="flat">받기 실패</span>`, "잠시 뒤 다시 시도");
@@ -1743,6 +1781,13 @@ async function indNaver(id, url, unit) {
 // 환율과 금: 네이버 증권 (원달러, 100엔, 국제 금 달러/온스, 국내 금 원/g)
 const FX = { usd:["exchange/FX_USDKRW", "원"], jpy:["exchange/FX_JPYKRW", "원"], gold:["metals/GCcv1", "$"], kgold:["metals/M04020000", "원/g"] };
 async function indFx() {   // 환율은 응답의 exchangeInfo 안에 값이 있고, 금은 바로 있음
+  const ut = document.querySelector('#i-fx .fr[data-k="usdt"]');   // 테더는 업비트 KRW-USDT
+  nativeGet("https://api.upbit.com/v1/ticker?markets=KRW-USDT").then(a => {
+    const d = a[0], c = d.signed_change_rate * 100;
+    ut.querySelector(".fv").textContent = n2(d.trade_price, d.trade_price < 1000 ? 1 : 0) + "원";
+    const fc = ut.querySelector(".fc"); fc.className = "fc " + cls(c); fc.textContent = `${sgn(c, 2)}%`;
+    ut.title = "업비트 테더(USDT) 원화 시세. 원달러보다 높으면 국내 코인 수요가 강하다는 뜻";
+  }).catch(() => { ut.querySelector(".fv").innerHTML = `<span class="flat">받기 실패</span>`; ut.querySelector(".fc").textContent = ""; });
   await Promise.all(Object.entries(FX).map(async ([k, [path, unit]]) => {
     const r = document.querySelector(`#i-fx .fr[data-k="${k}"]`);
     try {
