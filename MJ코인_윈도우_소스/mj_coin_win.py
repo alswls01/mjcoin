@@ -391,8 +391,8 @@ def on_loaded():
 
 if __name__ == "__main__":
     os.makedirs(DATA, exist_ok=True)
-    # 시작 창은 거의 정사각형이고 넉넉하게 (차트 아래 지표 두 줄이 있어도 차트가 잘 보이게, 부장님 지정 2026-11-17). 화면이 작으면 화면에 맞춤
-    ww, wh = 1240, 1040
+    # 시작 창은 가로로 넓게 (정사각형이면 엑셀 테마 글자가 잘림, 부장님 지정 2026-11-17). 화면이 작으면 화면에 맞춤
+    ww, wh = 1600, 1000
     try:
         sc = webview.screens[0]
         ww, wh = min(ww, sc.width - 40), min(wh, sc.height - 60)

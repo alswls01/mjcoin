@@ -74,7 +74,7 @@
   body.excel #bar button:hover, body.excel #bar2 button:hover { background:#d2e8db; border-color:#c4d9cc; }
   body.excel #bar button.on, body.excel #bar2 button.on { background:#c5ddcf; border-color:#a9c9b6; }
   body.excel #bar .sep { display:none; }
-  body.excel #bar3 { display:grid; grid-template-rows:repeat(3, 21px); gap:1px; padding-top:2px; }
+  body.excel #bar3 { display:grid; grid-template-rows:repeat(3, 21px); grid-auto-flow:column; gap:1px 2px; padding-top:2px; }   /* 테마 단추 3개, 흑백은 옆 줄 */
   body.excel #bar3 button { background:transparent; color:#262626; border:1px solid transparent; border-radius:0; padding:0 8px;
     font-size:11.5px; text-align:left; height:21px; font-family:inherit; cursor:pointer; }
   body.excel #bar3 button:hover { background:#d2e8db; border-color:#c4d9cc; }
@@ -91,7 +91,11 @@
   body.excel #alphaIn { width:84px; accent-color:#217346; }
   body.excel #g-alpha { min-width:0; }
   #monoBtn { display:none; } body.excel #monoBtn { display:block; }
-  #bar .theme.l { border-radius:7px 0 0 7px; margin-left:6px; } #bar .theme.r { border-radius:0 7px 7px 0; margin-left:-7px; }
+  #bar .theme.l { border-radius:7px 0 0 7px; margin-left:6px; } #bar .theme.r { border-radius:0 7px 7px 0; margin-left:-7px; } #bar .theme.m { border-radius:0; margin-left:-7px; }
+  /* 화이트 테마: 기본 테마와 짜임은 같고 흰 바탕 */
+  body.light { --bg:#ffffff; --panel:#f5f6f8; --line:#dfe3ea; --text:#1b1f27; --dim:#6b7280; --up:#e03131; --down:#1c64f2; --accent:#6d4aff; }
+  body.light #bar button.on { color:#fff; } body.light #bar2 button.on { background:#ece8ff; }
+  body.light #ind .gbar.fg i { background:#1b1f27; }
   body.excel #xl-formula { display:flex !important; align-items:center; height:26px; border-bottom:1px solid #d5d5d5; background:#fff; flex:none; font-size:12.5px; }
   body.excel #namebox { width:90px; border-right:1px solid #d5d5d5; height:100%; line-height:25px; padding:0 6px; }
   body.excel .fxbtn { color:#777; padding:0 10px; border-right:1px solid #d5d5d5; height:100%; line-height:25px; white-space:nowrap; }
@@ -397,8 +401,8 @@
   #alertList .al button { background:transparent; border:none; color:var(--dim); cursor:pointer; font-size:13px; line-height:1; padding:0 4px; }
   #alertList .al button:hover { color:#ef4f4f; }
   body.excel .grp { flex:none; } body.excel #g-alert { flex:0 1 240px; min-width:90px; }   /* 다른 리본 칸은 그대로, 알림 칸만 남는 자리에 맞춰 줄어듦 */
-  @media (max-width:1300px) { body.excel #g-clip { display:none !important; } }   /* 창이 좁으면 장식용 칸부터 숨겨 알림 칸 자리를 만듦 */
-  @media (max-width:1300px) { body.excel #g-font { display:none !important; } }
+  @media (max-width:1500px) { body.excel #g-clip { display:none !important; } }   /* 창이 좁으면 장식용 칸부터 숨겨 알림 칸 자리를 만듦 */
+  @media (max-width:1500px) { body.excel #g-font { display:none !important; } }
   body.excel #alertList { flex-direction:column; flex-wrap:nowrap; align-items:stretch; gap:0; width:100%; min-width:0; height:64px; max-height:none; margin:2px 0 0; font-size:11.5px; background:#fff; border:1px solid #c6c6c6; color:#262626; }
   body.excel #alertList .ah { padding:1px 6px; }
   body.excel #alertList .al > span { overflow:hidden; text-overflow:ellipsis; }
@@ -416,7 +420,24 @@
   body.excel .drawTxt { --panel:#fff; --text:#222; --accent:#217346; border-radius:0; }
 
   /* ---------- 버전, 업데이트 ---------- */
-  #verTag { color:var(--dim); font-size:11px; margin-left:8px; }
+  #verTag { color:var(--dim); font-size:11px; margin-left:8px; cursor:pointer; text-decoration:underline dotted; }
+  #verTag:hover { color:var(--accent); } body.excel #verTag { display:none; }
+  #verPop { display:none; position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.45); align-items:center; justify-content:center; }
+  #verPop.show { display:flex; }
+  #verPop .vb { width:380px; max-width:calc(100% - 32px); background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:0 12px 40px rgba(0,0,0,.4); font-size:13px; }
+  #verPop .vt { font-size:17px; font-weight:800; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  #verPop .vt .x { margin-left:auto; cursor:pointer; color:var(--dim); font-size:18px; font-weight:400; }
+  #verPop .vr { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); }
+  #verPop .vr span:first-child { color:var(--dim); }
+  #verPop .vs { margin:12px 0 8px; font-weight:700; }
+  #verPop .vs.new { color:#22c55e; }
+  #verPop .vn { white-space:pre-wrap; max-height:160px; overflow:auto; color:var(--dim); font-size:12px; line-height:1.5; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+  #verPop .vbtns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  #verPop .vbtns button { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:7px; padding:6px 14px; font:inherit; cursor:pointer; }
+  #verPop .vbtns button.go { background:#22c55e; border-color:#22c55e; color:#fff; font-weight:700; }
+  #verPop .vbtns button:disabled { opacity:.5; cursor:default; }
+  body.excel #verPop .vb { --panel:#fff; --text:#222; --dim:#666; --line:#d5d5d5; --bg:#f7f7f7; border-radius:2px; font-family:"Malgun Gothic", sans-serif; }
+  body.excel #verPop .vbtns button.go { background:#217346; border-color:#217346; }
   #updBtn { display:none; } #updBtn.show { display:inline-block; }
   #bar #updBtn { border-color:#22c55e; color:#22c55e; font-weight:700; }
   #bar #updBtn:disabled { opacity:.7; cursor:default; }
@@ -612,10 +633,10 @@ const toggles = [
   toggle("상승 다이버전스", () => showBull, v => showBull = v),
   toggle("하락 다이버전스", () => showBear, v => showBear = v),
 ];
-// 테마 고르기: 기본 / 엑셀 (기본 테마에선 보기 옵션 줄, 엑셀 테마에선 리본 "테마" 칸에 표시)
-const themeBtns = [["기본 테마", false, "l"], ["엑셀 테마", true, "r"]].map(([t, v, side]) => {
+// 테마 고르기: 기본 / 화이트 / 엑셀 (기본·화이트 테마에선 보기 옵션 줄, 엑셀 테마에선 리본 "테마" 칸에 표시)
+const themeBtns = [["기본 테마", "dark", "l"], ["화이트 테마", "light", "m"], ["엑셀 테마", "excel", "r"]].map(([t, mode, side]) => {
   const b = Object.assign(document.createElement("button"), {textContent:t, className:"theme " + side});
-  b.onclick = () => setTheme(v); b.isXl = v; return b;
+  b.onclick = () => { if (mode !== "excel") light = mode === "light"; setTheme(mode === "excel"); }; b.mode = mode; return b;
 });
 const divInfo = Object.assign(document.createElement("div"), {className:"info"});
 bar2.appendChild(divInfo);
@@ -1044,7 +1065,7 @@ window.mjWsState = (state) => {
 
 // ---------- 엑셀 테마 ----------
 const XL_TITLE = "통합 문서1 - Excel";
-let excel = false;
+let excel = false, light = false;   // light: 화이트 테마 (엑셀이 아닐 때만)
 const colName = i => { let s = ""; i++; while (i > 0) { const r = (i-1) % 26; s = String.fromCharCode(65+r) + s; i = Math.floor((i-1)/26); } return s; };
 const colhdr = document.getElementById("colhdr"), rowhdr = document.getElementById("rowhdr");
 for (let i = 0; i < 40; i++) colhdr.appendChild(Object.assign(document.createElement("div"), {textContent: colName(i)}));
@@ -1090,6 +1111,9 @@ const THEMES = {
   dark: { layout:{ background:{color:"#0e1117"}, textColor:"#8b93a5", fontFamily:"Pretendard, sans-serif" },
           grid:{ vertLines:{visible:false}, horzLines:{color:"#161b24", visible:true} },
           rightPriceScale:{ borderColor:"#262d3a" }, timeScale:{ borderColor:"#262d3a" } },
+  light: { layout:{ background:{color:"#ffffff"}, textColor:"#6b7280", fontFamily:"Pretendard, sans-serif" },
+           grid:{ vertLines:{visible:false}, horzLines:{color:"#f0f1f4", visible:true} },
+           rightPriceScale:{ borderColor:"#dfe3ea" }, timeScale:{ borderColor:"#dfe3ea" } },
   excel: { layout:{ background:{color:"#ffffff"}, textColor:"#595959", fontFamily:"Malgun Gothic, Noto Sans CJK KR, sans-serif" },
            grid:{ vertLines:{visible:false}, horzLines:{color:"#ececec", visible:true} },
            rightPriceScale:{ borderColor:"#d9d9d9" }, timeScale:{ borderColor:"#d9d9d9" } },
@@ -1108,21 +1132,25 @@ alphaIn.oninput = () => { alphaSet(alphaIn.value); try { localStorage.setItem("m
 function setTheme(on) {
   excel = on;
   document.body.classList.toggle("excel", on);
-  chart.applyOptions(THEMES[on ? "excel" : "dark"]);
-  // 볼린저 밴드 색: 엑셀 테마는 흰 바탕이라 검정
-  const bbEdge = on ? "#000000" : "rgba(45,212,191,.85)", bbCenter = on ? "#000000" : "rgba(250,204,21,.8)";
+  document.body.classList.toggle("light", light && !on);
+  chart.applyOptions(THEMES[on ? "excel" : light ? "light" : "dark"]);
+  // 볼린저 밴드 색: 엑셀 테마는 흰 바탕이라 검정, 화이트 테마는 진한 청록
+  const bbEdge = on ? "#000000" : light ? "rgba(13,148,136,.9)" : "rgba(45,212,191,.85)", bbCenter = on ? "#000000" : light ? "rgba(202,138,4,.9)" : "rgba(250,204,21,.8)";
   bbUp.applyOptions({ color:bbEdge }); bbLo.applyOptions({ color:bbEdge }); bbMid.applyOptions({ color:bbCenter });
   document.title = on ? XL_TITLE : "MJ코인";
   fitXl(); updateArrows();
-  themeBtns.forEach(b => { b.classList.toggle("on", b.isXl === on); (on ? document.getElementById("bar3") : bar).appendChild(b); });
+  const mode = on ? "excel" : light ? "light" : "dark";
+  themeBtns.forEach(b => { b.classList.toggle("on", b.mode === mode); (on ? document.getElementById("bar3") : bar).appendChild(b); });
   document.getElementById("bar3").appendChild(monoBtn);   // 흑백은 테마 단추 아래
   if (on) { const g = document.getElementById("g-alpha"); g.insertBefore(alphaBox, g.firstChild); } else bar2.insertBefore(alphaBox, divInfo);   // 투명도 막대 자리 (기본 테마는 추세선 줄)
-  try { localStorage.setItem("mjTheme", on ? "excel" : "dark"); } catch (e) {}
+  try { localStorage.setItem("mjTheme", mode); } catch (e) {}
+
 }
 // 엑셀 테마 끄기: "보기" 탭 클릭 또는 Ctrl+Shift+X
 document.getElementById("tab-view").onclick = () => setTheme(false);
 document.addEventListener("keydown", e => { if (e.ctrlKey && e.shiftKey && e.code === "KeyX") { e.preventDefault(); setTheme(!excel); } });
 let savedTheme = "dark"; try { savedTheme = localStorage.getItem("mjTheme") || "dark"; } catch (e) {}
+light = savedTheme === "light";
 setTheme(savedTheme === "excel");
 
 // ---------- 코인 추가 / 빼기 ----------
@@ -1977,7 +2005,7 @@ function evPt(e) {
 const plotW = () => box.clientWidth - chart.priceScale("right").width();
 // 가격 칸 아래 끝 (그 밑은 거래량, RSI, 스토캐스틱 칸이라 그림이 넘어가지 않게 자름)
 const plotH = () => { const m = cs.priceScale().options().scaleMargins || { bottom:0 }; return Math.round(box.clientHeight * (1 - m.bottom)) + 6; };
-const colr = () => excel ? "#1f5fbf" : "#fbbf24";
+const colr = () => excel || light ? "#1f5fbf" : "#fbbf24";
 function lineTo(a, b, extL, extR) {   // 두 점을 지나는 선을 화면 끝까지 늘림
   const W = plotW(); let p = { ...a }, q = { ...b };
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -1990,7 +2018,7 @@ const fmtP = p => (p < 0 ? "-" : "") + fmtIn(market, Math.abs(p));   // 음수�
 function label(x, y, s, c, align) {
   dg.font = "11px Pretendard, sans-serif"; const w = dg.measureText(s).width + 8;
   const lx = align === "r" ? x - w : x;
-  dg.fillStyle = excel ? "rgba(255,255,255,.9)" : "rgba(14,17,23,.85)"; dg.fillRect(lx, y - 8, w, 16);
+  dg.fillStyle = excel || light ? "rgba(255,255,255,.9)" : "rgba(14,17,23,.85)"; dg.fillRect(lx, y - 8, w, 16);
   dg.fillStyle = c; dg.textBaseline = "middle"; dg.fillText(s, lx + 4, y);
 }
 function shape(d, P) {   // 그림 하나 그리기. 맞추기(클릭) 판정에 쓸 선분 목록과 채운 영역을 돌려줌
@@ -2085,7 +2113,7 @@ function redraw() {
     if (P.some(q => q.x == null || q.y == null)) continue;
     d._hit = shape(d, P); d._P = P;
     if (d === D.sel || d === D.draft) {
-      dg.fillStyle = excel ? "#fff" : "#0e1117"; dg.strokeStyle = d.c || colr(); dg.lineWidth = 1.5;
+      dg.fillStyle = excel || light ? "#fff" : "#0e1117"; dg.strokeStyle = d.c || colr(); dg.lineWidth = 1.5;
       (d.k === "hline" || d.k === "alert" ? [] : d.k === "text" ? [] : P).forEach(q => { dg.beginPath(); dg.arc(q.x, q.y, 4.5, 0, Math.PI * 2); dg.fill(); dg.stroke(); });
     }
   }
@@ -2214,7 +2242,7 @@ loadList(); redraw(); renderAlertList();
 { // ---------- 버전 표시와 업데이트 (깃허브 릴리스) ----------
 // 파이썬이 켜질 때 window.mjVersion("1.0.0") 을 부름. 그때와 6시간마다 깃허브 최신 릴리스를 물어보고, 새 버전이면 단추를 띄움
 const verTag = Object.assign(document.createElement("span"), { id:"verTag" });
-divInfo.appendChild(verTag);
+bar.insertBefore(verTag, info.nextSibling);   // info 글자는 계속 덮어쓰여서 그 안이 아니라 옆에 둠
 const updBtn = Object.assign(document.createElement("button"), { id:"updBtn" });
 bar.insertBefore(updBtn, info);
 const uPend = new Map(); let uId = 0, uInfo = null, busy = false;
@@ -2227,6 +2255,7 @@ async function check() {
   if (r.st !== 200) return;
   uInfo = r.body;
   if (uInfo.newer && !busy) { updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; updBtn.title = "누르면 받아서 바꾸고 다시 켭니다"; updBtn.classList.add("show"); }
+  if (vp.classList.contains("show")) vpFill();   // 버전 정보 창이 열려 있으면 바로 고침
 }
 updBtn.onclick = async () => {
   if (!uInfo || busy) return;
@@ -2237,7 +2266,35 @@ updBtn.onclick = async () => {
   const r = await updCall("install");
   if (r.st !== 200) { busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; askConfirm("업데이트 실패", r.body.error || "알 수 없는 오류", "확인"); }
 };
-window.mjVersion = v => { verTag.textContent = "v" + v; check(); setInterval(check, 6 * 3600e3); };
+let curVer = "";
+window.mjVersion = v => { curVer = v; verTag.textContent = "v" + v; check(); setInterval(check, 6 * 3600e3); };
+// 버전 정보 창: 기본·화이트 테마는 위쪽 버전 글자, 엑셀 테마는 "파일"이나 "도움말" 탭을 누르면 열림
+const vp = Object.assign(document.createElement("div"), { id:"verPop" });
+vp.innerHTML = `<div class="vb"><div class="vt">MJ코인 정보<span class="x" title="닫기">✕</span></div>
+  <div class="vr"><span>지금 버전</span><b class="v-cur"></b></div>
+  <div class="vr"><span>최신 버전</span><b class="v-new"></b></div>
+  <div class="vr"><span>배포 위치</span><span>깃허브 alswls01/mjcoin</span></div>
+  <div class="vs"></div><div class="vn"></div>
+  <div class="vbtns"><button class="chk">업데이트 확인</button><button class="go">업데이트</button></div></div>`;
+document.body.appendChild(vp);
+const vpFill = () => {
+  vp.querySelector(".v-cur").textContent = curVer ? "v" + curVer : "확인 못 함";
+  vp.querySelector(".v-new").textContent = uInfo ? "v" + uInfo.latest : "확인 중";
+  const st = vp.querySelector(".vs"), go = vp.querySelector(".go");
+  if (!uInfo) { st.textContent = curVer ? "깃허브에 물어보는 중이거나 인터넷 연결을 확인하세요" : "프로그램 안에서만 버전을 확인할 수 있습니다"; st.className = "vs"; }
+  else if (uInfo.newer) { st.textContent = `새 버전 ${uInfo.latest} 이 있습니다`; st.className = "vs new"; }
+  else { st.textContent = "최신 버전을 쓰고 있습니다"; st.className = "vs"; }
+  vp.querySelector(".vn").textContent = (uInfo && uInfo.notes || "").trim() || "릴리스 설명 없음";
+  go.style.display = uInfo && uInfo.newer ? "" : "none"; go.disabled = busy;
+};
+window.mjShowVersion = () => { vpFill(); vp.classList.add("show"); };
+const vpClose = () => vp.classList.remove("show");
+vp.onclick = e => { if (e.target === vp || e.target.closest(".x")) vpClose(); };
+vp.querySelector(".chk").onclick = async e => { const b = e.target; b.disabled = true; b.textContent = "확인 중…"; await check(); b.disabled = false; b.textContent = "업데이트 확인"; vpFill(); };
+vp.querySelector(".go").onclick = () => { vpClose(); updBtn.click(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && vp.classList.contains("show")) vpClose(); });
+verTag.title = "버전 정보와 업데이트"; verTag.onclick = window.mjShowVersion;
+document.querySelectorAll("#xl-tabs span").forEach(t => { if (t.textContent === "파일" || t.textContent === "도움말") { t.style.cursor = "pointer"; t.onclick = window.mjShowVersion; } });
 }
 
 refreshTabs(); layout(); load(); stockLoop(); sendSubscribe(); fitXl();
