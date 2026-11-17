@@ -81,11 +81,14 @@
   body.excel #bar3 button.on { background:#c5ddcf; border-color:#a9c9b6; }
   /* 흑백: 엑셀 테마에서만. 차트, 지표 색, 그림까지 화면 전체를 회색으로 */
   body.excel.mono { filter:grayscale(1); }
-  /* 흐리게: 엑셀 테마에서만, 시트 안 내용의 투명도 */
-  body.excel #cells { opacity:var(--xlAlpha, 1); }
-  body.excel #alphaBox { display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:8px; width:104px; }
-  body.excel #alphaVal { font-size:12px; color:#262626; font-variant-numeric:tabular-nums; }
-  body.excel #alphaIn { width:100px; margin:0; accent-color:#217346; cursor:pointer; }
+  /* 투명도: 프로그램 창 전체 (두 테마 모두). 기본 테마는 위 단추 줄, 엑셀 테마는 리본 "투명도" 칸 */
+  #alphaBox { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--dim); }
+  #bar2 #alphaBox { margin-left:auto; } #bar2 #alphaBox + .info { margin-left:12px; } #alphaBox .al-l { white-space:nowrap; } #alphaVal { width:34px; text-align:right; font-variant-numeric:tabular-nums; }
+  #alphaIn { width:90px; margin:0; accent-color:var(--accent); cursor:pointer; }
+  body.excel #alphaBox .al-l { display:none; }
+  body.excel #alphaBox { flex-direction:column; gap:6px; padding-top:8px; width:88px; }
+  body.excel #alphaVal { font-size:12px; color:#262626; width:auto; }
+  body.excel #alphaIn { width:84px; accent-color:#217346; }
   body.excel #g-alpha { min-width:0; }
   #monoBtn { display:none; } body.excel #monoBtn { display:block; }
   #bar .theme.l { border-radius:7px 0 0 7px; margin-left:6px; } #bar .theme.r { border-radius:0 7px 7px 0; margin-left:-7px; }
@@ -393,7 +396,7 @@
   #alertList .al .u { color:var(--up); } #alertList .al .d { color:var(--down); }
   #alertList .al button { background:transparent; border:none; color:var(--dim); cursor:pointer; font-size:13px; line-height:1; padding:0 4px; }
   #alertList .al button:hover { color:#ef4f4f; }
-  body.excel .grp { flex:none; } body.excel #g-alert { flex:0 1 240px; min-width:110px; }   /* 다른 리본 칸은 그대로, 알림 칸만 남는 자리에 맞춰 줄어듦 */
+  body.excel .grp { flex:none; } body.excel #g-alert { flex:0 1 240px; min-width:90px; }   /* 다른 리본 칸은 그대로, 알림 칸만 남는 자리에 맞춰 줄어듦 */
   @media (max-width:1300px) { body.excel #g-clip { display:none !important; } }   /* 창이 좁으면 장식용 칸부터 숨겨 알림 칸 자리를 만듦 */
   @media (max-width:1300px) { body.excel #g-font { display:none !important; } }
   body.excel #alertList { flex-direction:column; flex-wrap:nowrap; align-items:stretch; gap:0; width:100%; min-width:0; height:64px; max-height:none; margin:2px 0 0; font-size:11.5px; background:#fff; border:1px solid #c6c6c6; color:#262626; }
@@ -445,7 +448,7 @@
   <div class="grp" id="g-ma"><div id="maBar"></div><div class="cap xl-only">이동평균</div></div>
   <div class="grp" id="g-alert"><div id="alertList"></div><div class="cap xl-only">가격 알림</div></div>
   <div class="grp xl-only" id="g-theme"><div id="bar3"></div><div class="cap">테마</div></div>
-  <div class="grp xl-only" id="g-alpha"><div id="alphaBox"><span id="alphaVal">100%</span><input id="alphaIn" type="range" min="10" max="100" step="5" value="100" title="시트 안의 시세, 차트, 지표를 흐리게 (엑셀 틀은 그대로)"></div><div class="cap">흐리게</div></div>
+  <div class="grp xl-only" id="g-alpha"><div id="alphaBox"><span class="al-l">투명도</span><span id="alphaVal">100%</span><input id="alphaIn" type="range" min="20" max="100" step="5" value="100" title="프로그램 창 전체를 투명하게 (20~100%)"></div><div class="cap">투명도</div></div>
 </div>
 <div id="xl-formula" class="xl-only"><div id="namebox">A1</div><div class="fxbtn">⋮ &nbsp;✕ &nbsp;✓ &nbsp;<i>fx</i></div><div id="fx"></div></div>
 <div id="sheet">
@@ -1097,9 +1100,9 @@ let mono = false; try { mono = localStorage.getItem("mjMono") === "1"; } catch (
 const monoRefresh = () => { monoBtn.textContent = (mono ? "☑ " : "☐ ") + "흑백"; monoBtn.classList.toggle("on", mono); document.body.classList.toggle("mono", mono); };
 monoBtn.onclick = () => { mono = !mono; monoRefresh(); try { localStorage.setItem("mjMono", mono ? "1" : "0"); } catch (e) {} };
 document.getElementById("bar3").appendChild(monoBtn); monoRefresh();
-// 흐리게 막대 (엑셀 테마 리본 "흐리게" 칸, 10~100%, 기억해 둠)
-const alphaIn = document.getElementById("alphaIn"), alphaVal = document.getElementById("alphaVal");
-const alphaSet = v => { v = Math.max(10, Math.min(100, Number(v) || 100)); alphaIn.value = v; alphaVal.textContent = v + "%"; document.body.style.setProperty("--xlAlpha", v / 100); };
+// 투명도 막대: 프로그램 창 전체를 20~100% 로 (파이썬이 실제 창의 투명도를 바꿈). 두 테마 모두, 기억해 둠
+const alphaBox = document.getElementById("alphaBox"), alphaIn = document.getElementById("alphaIn"), alphaVal = document.getElementById("alphaVal");
+const alphaSet = v => { v = Math.max(20, Math.min(100, Number(v) || 100)); alphaIn.value = v; alphaVal.textContent = v + "%"; window.mjPost(JSON.stringify({ alpha:v / 100 })); };
 try { alphaSet(localStorage.getItem("mjAlpha") || 100); } catch (e) { alphaSet(100); }
 alphaIn.oninput = () => { alphaSet(alphaIn.value); try { localStorage.setItem("mjAlpha", alphaIn.value); } catch (e) {} };
 function setTheme(on) {
@@ -1113,6 +1116,7 @@ function setTheme(on) {
   fitXl(); updateArrows();
   themeBtns.forEach(b => { b.classList.toggle("on", b.isXl === on); (on ? document.getElementById("bar3") : bar).appendChild(b); });
   document.getElementById("bar3").appendChild(monoBtn);   // 흑백은 테마 단추 아래
+  if (on) { const g = document.getElementById("g-alpha"); g.insertBefore(alphaBox, g.firstChild); } else bar2.insertBefore(alphaBox, divInfo);   // 투명도 막대 자리 (기본 테마는 추세선 줄)
   try { localStorage.setItem("mjTheme", on ? "excel" : "dark"); } catch (e) {}
 }
 // 엑셀 테마 끄기: "보기" 탭 클릭 또는 Ctrl+Shift+X

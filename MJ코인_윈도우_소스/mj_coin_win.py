@@ -279,6 +279,25 @@ def update_run(rid, op):
     OUT.call(f"window.mjUpdateReply({rid}, {st}, {json.dumps(json.dumps(body))})")
 
 
+def set_alpha(a):
+    """프로그램 창 전체 투명도 (화면 투명도 막대). 20~100%"""
+    try:
+        a = max(0.2, min(1.0, float(a)))
+        n = win.native if "win" in globals() and win else None
+        if n is None:
+            return
+        from System import Func, Type
+
+        def _s():
+            n.Opacity = a
+        if n.InvokeRequired:
+            n.Invoke(Func[Type](_s))
+        else:
+            _s()
+    except Exception as e:
+        log("투명도 오류:", e)
+
+
 # ---------- 화면에서 부르는 함수 ----------
 class Api:
     # 화면에서 온 요청: {"id":..,"url":..} 또는 {"notify":{"title":..,"body":..}}
@@ -286,6 +305,9 @@ class Api:
         try:
             req = json.loads(text)
         except Exception:
+            return
+        if "alpha" in req:
+            set_alpha(req["alpha"])
             return
         if "subscribe" in req:
             codes = [c for c in req["subscribe"] if isinstance(c, str) and c.startswith(("KRW-", "USDT-", "BTC-"))]
@@ -369,8 +391,8 @@ def on_loaded():
 
 if __name__ == "__main__":
     os.makedirs(DATA, exist_ok=True)
-    # 시작 창은 거의 정사각형 (차트 아래 지표 두 줄이 있어도 차트가 잘 보이게, 부장님 지정 2026-11-17). 화면이 작으면 화면에 맞춤
-    ww, wh = 1030, 950
+    # 시작 창은 거의 정사각형이고 넉넉하게 (차트 아래 지표 두 줄이 있어도 차트가 잘 보이게, 부장님 지정 2026-11-17). 화면이 작으면 화면에 맞춤
+    ww, wh = 1240, 1040
     try:
         sc = webview.screens[0]
         ww, wh = min(ww, sc.width - 40), min(wh, sc.height - 60)
