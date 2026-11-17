@@ -192,15 +192,18 @@
 <div id="xl-status" class="xl-only"><span>준비</span><span id="st-info"></span><span class="zoom">▦ ▣ ▤ &nbsp; − ━━━━●━━━━ + &nbsp;100%</span></div>
 <script src="lightweight-charts.js"></script>
 <script>
-// 윈도우판(pywebview) 연결: 바지트판은 window.webkit이 있어서 이 부분을 건너뜀
-if (!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mjcoin)) {
+// 파이썬으로 보내기: 바지트판(WebKitGTK)은 window.webkit 의 mjcoin 통로, 윈도우·맥판(pywebview)은 pywebview.api.post
+// 맥판 pywebview 는 window.webkit 을 자기 통로로 쓰므로 window.webkit 을 덮어쓰면 안 됨 (덮어써서 차트 요청이 전부 끊긴 적 있음)
+window.mjPost = (() => {
+  const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mjcoin;
+  if (h) return m => h.postMessage(m);
   const q = []; let ready = false;
   const send = m => window.pywebview.api.post(m);
   const go = () => { if (!ready) { ready = true; q.splice(0).forEach(send); } };
   window.addEventListener("pywebviewready", go);
   if (window.pywebview && window.pywebview.api && window.pywebview.api.post) go();
-  window.webkit = { messageHandlers: { mjcoin: { postMessage: m => ready ? send(m) : q.push(m) } } };
-}
+  return m => ready ? send(m) : q.push(m);
+})();
 window.mjWsBatch = arr => arr.forEach(t => window.mjWs(t));
 // 기본 종목 (코인 5 + 주식 1). + 버튼으로 추가한 목록은 localStorage "mjCoins"에 저장
 const DEFAULT_COINS = [["KRW-BTC","비트코인"],["USDT-BTC","비트코인"],["KRW-ETH","이더리움"],["KRW-XRP","리플"],["KRW-BCH","비트코인캐시"],["KRW-SOL","솔라나"],["STOCK-000660","SK하이닉스"]];
@@ -432,7 +435,7 @@ function fmtTime(t) {
 }
 let notified = { key:"" };
 function notify(title, body) {
-  try { window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({ notify:{ title, body } })); } catch (e) {}
+  try { window.mjPost(JSON.stringify({ notify:{ title, body } })); } catch (e) {}
 }
 function updateIndicators() {
   if (!candles.length) return;
@@ -659,7 +662,7 @@ const pending = new Map(); let reqId = 0;
 function nativeGet(u) {
   return new Promise((ok, fail) => {
     const id = ++reqId; pending.set(id, {ok, fail});
-    window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({id, url:u}));
+    window.mjPost(JSON.stringify({id, url:u}));
     setTimeout(() => { if (pending.has(id)) { pending.delete(id); fail(new Error("시간 초과")); } }, 15000);
   });
 }
@@ -768,7 +771,7 @@ setTheme(savedTheme === "excel");
 // ---------- 코인 추가 / 빼기 ----------
 // 업비트 실시간 구독 목록을 파이썬에 알려 줌 (새 목록을 보내면 업비트가 구독을 통째로 바꿈, 시험으로 확인)
 function sendSubscribe() {
-  try { window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({ subscribe: COINS.map(c => c[0]).filter(c => /^(KRW|USDT|BTC)-/.test(c)) })); } catch (e) {}
+  try { window.mjPost(JSON.stringify({ subscribe: COINS.map(c => c[0]).filter(c => /^(KRW|USDT|BTC)-/.test(c)) })); } catch (e) {}
 }
 function afterListChange() { saveCoins(); buildTabs(); refreshTabs(); sendSubscribe(); fitXl(); }
 function addCoin(code, name) {

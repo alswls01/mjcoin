@@ -2,8 +2,21 @@
 # 화면은 web/index.html (바지트·윈도우판과 같은 파일), 창은 pywebview(맥 기본 WebKit)
 # 인터넷 요청과 실시간 연결은 파이썬이 처리해서 화면에 넘겨 줌 (화면에서 업비트로 직접 요청하면 429로 막힌 적 있음)
 # 다이버전스 알림은 맥 기본 알림(화면 오른쪽 위)으로 띄움 (osascript)
-import os, sys, json, threading, time, subprocess, urllib.request, urllib.error
+import os, sys, re, json, threading, time, subprocess, urllib.request, urllib.error, urllib.parse
+import base64, hashlib, hmac, uuid, ssl
 import webview, websocket
+# python.org 판 파이썬은 "Install Certificates" 를 따로 안 하면 HTTPS 인증서 확인이 실패함 (이 맥에서 실제로 확인)
+# 그래서 certifi 인증서 묶음을 직접 씀 (앱으로 만들어도 같이 들어감)
+try:
+    import certifi
+    CA_FILE = certifi.where()
+except Exception:
+    CA_FILE = None
+SSL_CTX = ssl.create_default_context(cafile=CA_FILE)
+try:
+    import keyring   # 업비트 키는 맥 키체인에만 저장 (파일·화면 저장소에는 남기지 않음)
+except Exception:
+    keyring = None
 
 BASE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 HTML = os.path.join(BASE, "web", "index.html")
@@ -12,7 +25,9 @@ WS_URL = "wss://api.upbit.com/websocket/v1"
 CODES = ["KRW-BTC", "USDT-BTC", "KRW-ETH", "KRW-XRP", "KRW-BCH", "KRW-SOL"]
 UA = "MJCoin/1.0"
 # 화면이 요청할 수 있는 주소 (업비트 + 네이버 증권)
-ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/")
+ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/",
+           "https://api.alternative.me/", "https://fapi.binance.com/", "https://api.binance.com/",
+           "https://api.bitcoin-data.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV
 LOG = os.path.join(DATA, "mjcoin.log")
 SUB = {"codes": list(CODES), "ws": None, "lock": threading.Lock()}   # 화면에서 코인을 추가/빼면 codes가 바뀜
 
@@ -93,6 +108,220 @@ def toast(title, body):
         log("알림 오류:", e)
 
 
+# ---------- 업비트 계정 연결과 주문 ----------
+# 업비트에는 "업비트로 로그인" 이 없어서 Open API 키(Access, Secret)를 넣는 것이 곧 연결(로그인)
+# 키는 맥 키체인에만 저장. 서명(JWT)과 주문은 여기서만 하고, 화면에는 Secret Key를 다시 돌려주지 않음
+# 화면이 업비트 주문 주소를 직접 부를 수 없도록, 할 수 있는 일(op)을 아래 몇 가지로 막아 둠
+KR_SERVICE = "MJCoin.upbit"
+TRADE = {"keys": None, "lock": threading.Lock()}
+MARKET_RE = re.compile(r"^KRW-[A-Z0-9]{1,15}$")      # 지금은 원화 마켓만 주문
+NUM_RE = re.compile(r"^\d{1,15}(\.\d{1,8})?$")        # 주문 가격·수량 (양수, 소수 8자리까지)
+UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+
+
+def keys_load():
+    if TRADE["keys"] is None and keyring:
+        try:
+            a, s = keyring.get_password(KR_SERVICE, "access"), keyring.get_password(KR_SERVICE, "secret")
+            TRADE["keys"] = (a, s) if a and s else False
+        except Exception as e:
+            log("키체인 읽기 실패:", e)
+            TRADE["keys"] = False
+    return TRADE["keys"] or None
+
+
+def keys_save(a, s):
+    keyring.set_password(KR_SERVICE, "access", a)
+    keyring.set_password(KR_SERVICE, "secret", s)
+    TRADE["keys"] = (a, s)
+
+
+def keys_delete():
+    for n in ("access", "secret"):
+        try:
+            keyring.delete_password(KR_SERVICE, n)
+        except Exception:
+            pass
+    TRADE["keys"] = False
+
+
+def b64url(b):
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+
+def jwt_token(access, secret, query):
+    # 업비트 문서: HS512, payload = access_key, nonce(매번 새 UUID), 파라미터가 있으면 query_hash(SHA512)
+    payload = {"access_key": access, "nonce": str(uuid.uuid4())}
+    if query:
+        payload["query_hash"] = hashlib.sha512(query.encode()).hexdigest()
+        payload["query_hash_alg"] = "SHA512"
+    head = b64url(json.dumps({"alg": "HS512", "typ": "JWT"}, separators=(",", ":")).encode())
+    body = b64url(json.dumps(payload, separators=(",", ":")).encode())
+    sig = hmac.new(secret.encode(), f"{head}.{body}".encode(), hashlib.sha512).digest()
+    return f"{head}.{body}.{b64url(sig)}"
+
+
+def upbit_private(method, path, params=None, keys=None):
+    # 반환: (상태코드, 본문 문자열)
+    keys = keys or keys_load()
+    if not keys:
+        return 401, json.dumps({"error": {"name": "not_connected", "message": "업비트가 연결되지 않았습니다"}})
+    params = params or {}
+    query = urllib.parse.unquote(urllib.parse.urlencode(params))   # 서명할 문자열 = 실제 보낼 값 (순서 그대로)
+    url = "https://api.upbit.com" + path
+    data = None
+    headers = {"User-Agent": UA, "Accept": "application/json", "Authorization": "Bearer " + jwt_token(*keys, query)}
+    if method == "POST":
+        data = json.dumps(params).encode()
+        headers["Content-Type"] = "application/json; charset=utf-8"
+    elif query:
+        url += "?" + query
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers, method=method), timeout=15, context=SSL_CTX)
+        return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+    except Exception as e:
+        return 0, json.dumps({"error": {"name": "network", "message": str(e)}})
+
+
+def err(name, msg):
+    return 400, json.dumps({"error": {"name": name, "message": msg}})
+
+
+def trade_op(t):
+    # 화면이 부탁할 수 있는 일 목록. 여기에 없는 것은 하지 않음
+    op = t.get("op")
+    if not keyring:
+        return err("no_keyring", "keyring 패키지가 없어 키를 안전하게 저장할 수 없습니다 (pip install keyring)")
+    if op == "status":
+        k = keys_load()
+        return 200, json.dumps({"connected": bool(k), "access": (k[0][:4] + "…" + k[0][-4:]) if k else ""})
+    if op == "connect":
+        a, s = str(t.get("access", "")).strip(), str(t.get("secret", "")).strip()
+        if not (20 <= len(a) <= 100 and 20 <= len(s) <= 100):
+            return err("bad_key", "키 길이가 맞지 않습니다. 복사한 값을 다시 확인해 주세요")
+        st, body = upbit_private("GET", "/v1/accounts", keys=(a, s))   # 진짜 키인지 잔고 조회로 확인한 뒤에만 저장
+        if st == 200:
+            try:
+                keys_save(a, s)
+            except Exception as e:
+                log("키체인 저장 실패:", e)
+                return err("keychain", "키체인에 저장하지 못했습니다: " + str(e))
+        return st, body
+    if op == "disconnect":
+        keys_delete()
+        return 200, json.dumps({"connected": False})
+    if op == "accounts":
+        return upbit_private("GET", "/v1/accounts")
+    market = str(t.get("market", ""))
+    if op in ("chance", "open", "order") and not MARKET_RE.match(market):
+        return err("bad_market", "원화 마켓 코인만 주문할 수 있습니다")
+    if op == "chance":
+        return upbit_private("GET", "/v1/orders/chance", {"market": market})
+    if op == "open":
+        return upbit_private("GET", "/v1/orders/open", {"market": market, "limit": 100})
+    if op == "cancel":
+        u = str(t.get("uuid", ""))
+        if not UUID_RE.match(u):
+            return err("bad_uuid", "주문 번호가 올바르지 않습니다")
+        return upbit_private("DELETE", "/v1/order", {"uuid": u})
+    if op == "order":
+        side, kind = t.get("side"), t.get("ord_type")
+        price, volume = str(t.get("price") or ""), str(t.get("volume") or "")
+        # 업비트 문서: 지정가 = volume+price, 시장가 매수(price) = price(총액)만, 시장가 매도(market) = volume만
+        need = {"limit": (True, True), "price": (True, False), "market": (False, True)}.get(kind)
+        if side not in ("bid", "ask") or not need:
+            return err("bad_order", "주문 종류가 올바르지 않습니다")
+        if (kind == "price" and side != "bid") or (kind == "market" and side != "ask"):
+            return err("bad_order", "시장가 매수는 총액, 시장가 매도는 수량으로만 주문합니다")
+        body = {"market": market, "side": side, "ord_type": kind}
+        if need[0]:
+            if not NUM_RE.match(price) or float(price) <= 0:
+                return err("bad_price", "가격(금액)이 올바르지 않습니다")
+            body["price"] = price
+        if need[1]:
+            if not NUM_RE.match(volume) or float(volume) <= 0:
+                return err("bad_volume", "수량이 올바르지 않습니다")
+            body["volume"] = volume
+        with TRADE["lock"]:              # 주문은 한 번에 하나씩
+            st, res = upbit_private("POST", "/v1/orders", body)
+        log("주문", json.dumps(body, ensure_ascii=False), "결과", st, res[:300])
+        return st, res
+    return err("bad_op", "알 수 없는 요청")
+
+
+def trade_run(rid, t):
+    try:
+        st, body = trade_op(t)
+    except Exception as e:
+        log("주문 처리 오류:", e)
+        st, body = 0, json.dumps({"error": {"name": "internal", "message": str(e)}})
+    OUT.call(f"window.mjTradeReply({rid}, {st}, {json.dumps(body)})")
+
+
+# ---------- 미국 경제지표 발표 수치 (BLS 공개 API, 키 없이 하루 25번까지) ----------
+# 일정은 web/econ_events.js 에 들어 있고, 여기서는 발표된 수치만 받아 DATA/econ.json 에 저장해 둠
+ECON_SERIES = [
+    "CUSR0000SA0", "CUUR0000SA0", "CUSR0000SA0L1E", "CUUR0000SA0L1E",   # CPI, 근원 CPI (계절조정, 원계열)
+    "WPSFD4", "WPUFD4", "WPSFD49104", "WPUFD49104",                     # PPI 최종수요, 근원 PPI
+    "CES0000000001", "LNS14000000",                                     # 비농업 고용, 실업률
+    "JTS000000000000000JOL", "CIS1010000000000Q",                       # 구인건수, 고용비용지수 분기 변화율
+]
+ECON_FILE = os.path.join(DATA, "econ.json")
+ECON_LOCK = threading.Lock()
+
+
+def econ_get(force):
+    # 평소에는 3시간, 발표 직후 화면이 다시 달라고 하면(force) 10분 지난 것만 새로 받음
+    with ECON_LOCK:
+        cache = None
+        try:
+            with open(ECON_FILE, encoding="utf-8") as f:
+                cache = json.load(f)
+        except Exception:
+            pass
+        age = time.time() - cache.get("fetched", 0) if cache else 1e9
+        if cache and age < (600 if force else 10800):
+            return 200, cache
+        y = int(time.strftime("%Y"))
+        body = json.dumps({"seriesid": ECON_SERIES, "startyear": str(y - 2), "endyear": str(y)}).encode()
+        try:
+            req = urllib.request.Request("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=body,
+                                         headers={"Content-Type": "application/json", "User-Agent": UA})
+            d = json.loads(urllib.request.urlopen(req, timeout=30, context=SSL_CTX).read().decode("utf-8"))
+            if d.get("status") != "REQUEST_SUCCEEDED":
+                raise RuntimeError(f"{d.get('status')} {d.get('message')}")
+            series = {}
+            for sr in d["Results"]["series"]:
+                pts = []
+                for x in sr.get("data", []):
+                    per = x.get("period", "")
+                    if per.startswith("M") and per != "M13":
+                        pts.append([f"{x['year']}-{per[1:]}", x["value"]])
+                    elif per.startswith("Q"):
+                        pts.append([f"{x['year']}-Q{int(per[1:])}", x["value"]])
+                series[sr["seriesID"]] = pts
+            cache = {"fetched": time.time(), "series": series}
+            with open(ECON_FILE, "w", encoding="utf-8") as f:
+                json.dump(cache, f)
+            log("경제지표 수치 받음:", len(series), "개 시리즈")
+            return 200, cache
+        except Exception as e:
+            log("경제지표 수치 받기 실패:", e)
+            if cache:
+                return 200, dict(cache, stale=True)
+            return 0, {"error": str(e)}
+
+
+def econ_run(rid, force):
+    try:
+        st, body = econ_get(bool(force))
+    except Exception as e:
+        st, body = 0, {"error": str(e)}
+    OUT.call(f"window.mjEconReply({rid}, {st}, {json.dumps(json.dumps(body))})")
+
+
 # ---------- 화면에서 부르는 함수 ----------
 class Api:
     # 화면에서 온 요청: {"id":..,"url":..} 또는 {"notify":{"title":..,"body":..}}
@@ -117,13 +346,19 @@ class Api:
             n = req["notify"]
             threading.Thread(target=toast, args=(n.get("title", "MJ코인"), n.get("body", "")), daemon=True).start()
             return
+        if "trade" in req and isinstance(req["trade"], dict) and isinstance(req.get("id"), int):
+            threading.Thread(target=trade_run, args=(req["id"], req["trade"]), daemon=True).start()
+            return
+        if "econ" in req and isinstance(req.get("id"), int):
+            threading.Thread(target=econ_run, args=(req["id"], (req["econ"] or {}).get("force") if isinstance(req["econ"], dict) else False), daemon=True).start()
+            return
         url = req.get("url", "")
-        if url.startswith(ALLOWED):
+        if url.startswith(ALLOWED) and isinstance(req.get("id"), int):
             threading.Thread(target=self._fetch, args=(req["id"], url), daemon=True).start()
 
     def _fetch(self, rid, url):
         try:
-            r = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=15)
+            r = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=15, context=SSL_CTX)
             body, status = r.read().decode("utf-8", "replace"), r.status
         except urllib.error.HTTPError as e:
             body, status = e.read().decode("utf-8", "replace"), e.code
@@ -137,7 +372,8 @@ def ws_loop():
     first, retry = True, 2
     while True:
         try:
-            ws = websocket.create_connection(WS_URL, timeout=30, header=[f"User-Agent: {UA}"])
+            ws = websocket.create_connection(WS_URL, timeout=30, header=[f"User-Agent: {UA}"],
+                                            sslopt={"ca_certs": CA_FILE} if CA_FILE else None)
             with SUB["lock"]:
                 ws.send(sub_msg())
             SUB["ws"] = ws
@@ -170,12 +406,28 @@ def on_loaded():
     if started:
         return
     started = True
+    OUT.call("window.mjTradeReady && window.mjTradeReady()")   # 이 판은 주문 기능이 있다고 화면에 알림 (다른 판은 안 불러서 주문 버튼이 안 보임)
     threading.Thread(target=OUT.loop, daemon=True).start()
     threading.Thread(target=ws_loop, daemon=True).start()
 
 
+def single_instance():
+    # 이미 떠 있으면 새로 띄우지 않음. 화면을 고정 포트(설정 저장용)로 띄워서 두 번째 창은 빈 화면이 됨 (2026-11-16 실제로 겪음)
+    import fcntl
+    f = open(os.path.join(DATA, "mjcoin.lock"), "w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        log("이미 실행 중이라 새로 띄우지 않음")
+        subprocess.run(["osascript", "-e", 'display alert "MJ코인" message "MJ코인이 이미 실행 중입니다. 떠 있는 창을 쓰세요."'],
+                       capture_output=True, timeout=60)
+        sys.exit(0)
+    return f   # 프로그램이 끝날 때까지 잡고 있어야 잠금이 유지됨
+
+
 if __name__ == "__main__":
     os.makedirs(DATA, exist_ok=True)
+    _lock = single_instance()
     win = webview.create_window("MJ코인", url=HTML, js_api=Api(), width=1024, height=640, min_size=(800, 500))
     OUT.win = win
     win.events.loaded += on_loaded

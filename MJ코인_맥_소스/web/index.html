@@ -119,6 +119,14 @@
   .coin .x { position:absolute; right:6px; top:2px; font-size:15px; color:var(--dim); display:none; padding:0 4px; }
   .coin:hover .x { display:block; } .coin .x:hover { color:#ff6b6b; }
   body.excel .coin.addcard { display:none; }
+  /* 카드 줄 좌우 넘김 버튼 (기본 테마, 카드가 넘칠 때만). 스크롤바는 그대로 두고 양쪽 끝에 붙어 있음 */
+  .tarrow { display:none; position:sticky; z-index:3; flex:none; width:30px; align-items:center; justify-content:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; color:var(--text); font-size:20px; cursor:pointer; user-select:none; }
+  .tarrow.l { left:0; order:-1; box-shadow:6px 0 8px var(--bg); } .tarrow.r { right:0; order:999; box-shadow:-6px 0 8px var(--bg); }
+  .tarrow:hover { border-color:var(--accent); }
+  .tarrow.off { color:var(--line); cursor:default; border-color:var(--line); }
+  #top.over .tarrow { display:flex; }
+  body.excel .tarrow { display:none !important; }
   body.excel .coin .x { top:0; right:2px; font-size:13px; }
   body.excel #xl-sheets .plus { cursor:pointer; } body.excel #xl-sheets .plus:hover { color:var(--xg); }
   body.excel #top { overflow:visible; flex-wrap:wrap; }
@@ -158,6 +166,150 @@
   body.excel #xl-status { display:flex !important; align-items:center; gap:16px; height:22px; background:#f3f3f3; border-top:1px solid #e1e1e1; padding:0 10px; font-size:11.5px; color:#444; flex:none; }
   body.excel #st-info { flex:1; text-align:right; }
   body.excel #bar .info, body.excel #bar2 .info { display:none; }
+  /* 업비트 주문 창 (오른쪽에서 열림). 맥판처럼 파이썬이 주문 기능을 알려 줄 때만 버튼이 보임 */
+  #tradeBtn { display:none; } #tradeBtn.ready { display:inline-block; }
+  #bar #tradeBtn.ready { border-color:var(--accent); }
+  #trade { display:none; position:fixed; top:0; right:0; bottom:0; width:min(340px, 100vw); z-index:40; background:var(--panel); color:var(--text);
+    border-left:1px solid var(--line); box-shadow:-8px 0 24px rgba(0,0,0,.35); flex-direction:column; font-size:13px; }
+  #trade.show { display:flex; }
+  #trade .thead { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; font-size:15px; border-bottom:1px solid var(--line); }
+  #trade .tclose { cursor:pointer; font-size:20px; color:var(--dim); line-height:1; }
+  #trade .tbody { overflow-y:auto; flex:1; padding:12px 14px 20px; }
+  #trade label { display:block; margin:8px 0 0; color:var(--dim); font-size:12px; }
+  #trade input { display:block; width:100%; margin-top:3px; padding:7px 9px; border-radius:7px; border:1px solid var(--line); background:var(--bg);
+    color:var(--text); font:inherit; font-size:14px; font-variant-numeric:tabular-nums; }
+  #trade .tnote { color:var(--dim); font-size:12px; line-height:1.55; margin:0 0 6px; padding-left:16px; }
+  #trade p.tnote { padding-left:0; }
+  #trade .tnote b { color:var(--text); }
+  #trade .tbtn { width:100%; margin-top:12px; padding:9px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text);
+    font:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+  #trade .tbtn.bid { background:var(--up); border-color:var(--up); color:#fff; }
+  #trade .tbtn.ask { background:var(--down); border-color:var(--down); color:#fff; }
+  #trade .tbtn.main { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #trade .tbtn:disabled { opacity:.5; cursor:default; }
+  #trade .tlink { background:none; border:none; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+  #trade .trow { display:flex; justify-content:space-between; align-items:center; color:var(--dim); font-size:12px; }
+  #trade .tmk { font-size:16px; font-weight:700; margin:10px 0 6px; }
+  #trade .tseg { display:flex; margin-top:8px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  #trade .tseg button { flex:1; padding:7px; background:transparent; border:none; color:var(--dim); font:inherit; cursor:pointer; }
+  #trade .tseg button.on { background:var(--line); color:var(--text); font-weight:700; }
+  #trade #t-side button.on[data-v="bid"] { background:var(--up); color:#fff; }
+  #trade #t-side button.on[data-v="ask"] { background:var(--down); color:#fff; }
+  #trade .tbal { display:flex; justify-content:space-between; margin-top:8px; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
+  #trade .tbal b { color:var(--text); font-weight:600; }
+  #trade .tpct { display:flex; gap:4px; margin-top:6px; }
+  #trade .tpct button { flex:1; padding:4px 0; border-radius:6px; border:1px solid var(--line); background:transparent; color:var(--dim); font:inherit; font-size:12px; cursor:pointer; }
+  #trade .tmsg { margin-top:8px; font-size:12px; line-height:1.5; color:var(--dim); white-space:pre-line; }
+  #trade .tmsg.bad { color:#ff6b6b; } #trade .tmsg.good { color:#2ed573; }
+  #trade .tsub { display:flex; justify-content:space-between; align-items:center; margin:18px 0 6px; padding-top:12px; border-top:1px solid var(--line); font-weight:700; }
+  #trade .tord { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:12px; font-variant-numeric:tabular-nums; }
+  #trade .tord .s { font-weight:700; } #trade .tord .s.bid { color:var(--up); } #trade .tord .s.ask { color:var(--down); }
+  #trade .tord .d { flex:1; color:var(--dim); line-height:1.45; } #trade .tord .d b { color:var(--text); font-weight:600; }
+  #trade .tord button { background:transparent; border:1px solid var(--line); border-radius:6px; color:var(--dim); font:inherit; font-size:12px; padding:3px 8px; cursor:pointer; }
+  #tconfirm { display:none; position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); align-items:center; justify-content:center; }
+  #tconfirm.show { display:flex; }
+  #tconfirm .cbox { width:min(340px, 92vw); background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:12px; padding:16px; font-size:14px; }
+  #tconfirm #tc-body { margin:10px 0 14px; line-height:1.7; white-space:pre-line; font-variant-numeric:tabular-nums; }
+  #tconfirm .cbtns { display:flex; gap:8px; }
+  #tconfirm .cbtns button { flex:1; padding:9px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; font-weight:700; cursor:pointer; }
+  #tconfirm #tc-yes.bid { background:var(--up); border-color:var(--up); color:#fff; }
+  #tconfirm #tc-yes.ask { background:var(--down); border-color:var(--down); color:#fff; }
+  body.excel #trade, body.excel #tconfirm .cbox { --panel:#fff; --text:#222; --dim:#666; --line:#d5d5d5; --bg:#fff; --accent:#217346; --up:#c00000; --down:#0050c8; }
+  body.excel #trade { box-shadow:-6px 0 20px rgba(0,0,0,.18); }
+
+  /* ---------- 미국 경제지표 흐르는 띠, 발표 캘린더 ---------- */
+  #econ { order:3; display:flex; align-items:center; gap:8px; margin:0 12px 8px; height:28px; background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; overflow:hidden; font-size:12.5px; flex:none; }
+  #econ .elbl { flex:none; height:100%; display:flex; align-items:center; gap:5px; padding:0 10px; border-right:1px solid var(--line); color:var(--text);
+    font-weight:700; cursor:pointer; white-space:nowrap; }
+  #econ .elbl:hover { color:var(--accent); }
+  #econ .evp { flex:1; min-width:0; overflow:hidden; height:100%; position:relative;
+    mask-image:linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+  #econ .etr { position:absolute; left:0; top:0; height:100%; display:flex; align-items:center; white-space:nowrap; will-change:transform;
+    animation:econMove var(--dur, 60s) linear infinite; }
+  #econ .evp:hover .etr { animation-play-state:paused; }
+  @keyframes econMove { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+  #econ .eit { display:inline-flex; align-items:center; gap:6px; padding:0 18px 0 0; cursor:pointer; color:var(--dim); font-variant-numeric:tabular-nums; }
+  #econ .eit:hover { color:var(--text); }
+  #econ .eit b { color:var(--text); font-weight:600; }
+  #econ .eit .dot { width:7px; height:7px; border-radius:50%; flex:none; }
+  #econ .eit .tag { font-size:11px; padding:1px 6px; border-radius:9px; border:1px solid var(--line); color:var(--dim); }
+  #econ .eit .tag.today { border-color:var(--up); color:var(--up); font-weight:700; }
+  #econ .eit .tag.soon { border-color:var(--accent); color:var(--accent); }
+  #econ .eit .res { color:var(--text); }
+  body.excel #econ { order:0; margin:0; height:100%; flex:1; min-width:0; background:transparent; border:none; border-radius:0; font-size:11.5px;
+    --panel:#f3f3f3; --text:#222; --dim:#555; --line:#c8c8c8; --accent:#217346; --up:#c00000; }
+  body.excel #econ .elbl { padding:0 8px; border-right:1px solid #d5d5d5; font-weight:400; }
+  body.excel #econ .evp { mask-image:none; }
+  body.excel #st-info { flex:none; }
+  #ecal { display:none; position:fixed; inset:0; z-index:55; background:rgba(0,0,0,.5); align-items:center; justify-content:center; }
+  #ecal.show { display:flex; }
+  #ecal .cbx { width:min(780px, 95vw); height:min(720px, 92vh); display:flex; flex-direction:column; background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
+  #ecal .chd { display:flex; align-items:center; gap:8px; padding:12px 14px 10px; border-bottom:1px solid var(--line); flex:none; }
+  #ecal .chd .ttl { font-size:18px; font-weight:700; min-width:130px; }
+  #ecal .chd button { background:transparent; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:4px 10px; font:inherit; cursor:pointer; }
+  #ecal .chd button:hover { border-color:var(--accent); }
+  #ecal .seg { display:flex; margin-left:auto; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  #ecal .seg button { border:none; border-radius:0; padding:4px 14px; }
+  #ecal .seg button.on { background:var(--accent); color:#fff; }
+  #ecal .cx { font-size:18px; line-height:1; padding:3px 9px !important; }
+  #ecal .cmain { flex:1; min-height:0; display:flex; flex-direction:column; }
+  #ecal .wdays { display:grid; grid-template-columns:repeat(7, 1fr); flex:none; font-size:11.5px; color:var(--dim); text-align:center; padding:6px 0 4px; border-bottom:1px solid var(--line); }
+  #ecal .wdays .sun, #ecal .mg .sun .dn { color:var(--up); } #ecal .wdays .sat, #ecal .mg .sat .dn { color:var(--down); }
+  #ecal .mg { flex:1; min-height:0; display:grid; grid-template-columns:repeat(7, 1fr); grid-auto-rows:1fr; }
+  #ecal .mg .dc { border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:3px 4px; min-width:0; overflow:hidden; cursor:pointer; }
+  #ecal .mg .dc:nth-child(7n) { border-right:none; }
+  #ecal .mg .dc.out { opacity:.38; }
+  #ecal .mg .dc.sel { background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  #ecal .dn { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; border-radius:11px; font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+  #ecal .today .dn, #ecal .wh .today .dn { background:var(--up); color:#fff !important; }
+  #ecal .chip { display:block; margin-top:2px; padding:1px 5px; border-radius:4px; font-size:11px; line-height:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; }
+  #ecal .more { font-size:10.5px; color:var(--dim); padding-left:3px; }
+  #ecal .wv { flex:1; min-height:0; display:flex; flex-direction:column; }
+  #ecal .wh { display:grid; grid-template-columns:44px repeat(7, 1fr); flex:none; border-bottom:1px solid var(--line); padding:4px 0; text-align:center; font-size:11.5px; color:var(--dim); }
+  #ecal .wh > div { cursor:pointer; } #ecal .wh .sel .dn { outline:2px solid var(--accent); }
+  #ecal .wb { flex:1; min-height:0; overflow-y:auto; position:relative; }
+  #ecal .wgrid { display:grid; grid-template-columns:44px repeat(7, 1fr); position:relative; }
+  #ecal .hr { height:30px; border-bottom:1px solid var(--line); font-size:10.5px; color:var(--dim); text-align:right; padding-right:6px; transform:translateY(-7px); border-bottom-color:transparent; }
+  #ecal .wcol { position:relative; border-left:1px solid var(--line);
+    background-image:linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size:100% 30px; }
+  #ecal .wev { position:absolute; left:2px; right:2px; min-height:26px; border-radius:5px; padding:2px 4px; font-size:10.5px; line-height:12px; color:#fff; overflow:hidden; cursor:pointer; }
+  #ecal .nowline { position:absolute; left:0; right:0; height:2px; background:var(--up); z-index:2; pointer-events:none; }
+  #ecal .clist { flex:none; max-height:38%; overflow-y:auto; border-top:1px solid var(--line); padding:8px 14px 12px; }
+  #ecal .clist .ld { font-weight:700; margin:2px 0 6px; }
+  #ecal .clist .none { color:var(--dim); padding:6px 0; }
+  #ecal .ce { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); }
+  #ecal .ce:last-child { border-bottom:none; }
+  #ecal .ce .bar { width:4px; border-radius:2px; flex:none; }
+  #ecal .ce .tm { width:44px; flex:none; font-variant-numeric:tabular-nums; color:var(--dim); }
+  #ecal .ce .bd { flex:1; line-height:1.55; }
+  #ecal .ce .bd .nm { font-weight:700; }
+  #ecal .ce .bd .sub { color:var(--dim); font-size:12px; }
+  #ecal .ce .bd .v { font-variant-numeric:tabular-nums; }
+  #ecal .ce.hl { background:color-mix(in srgb, var(--accent) 12%, transparent); border-radius:6px; }
+  #ecal .cfoot { font-size:11px; color:var(--dim); padding:6px 14px; border-top:1px solid var(--line); flex:none; }
+  body.excel #ecal .cbx { --panel:#fff; --text:#222; --dim:#666; --line:#e1e1e1; --bg:#fff; --accent:#217346; --up:#c00000; --down:#0050c8; border-radius:2px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+
+  /* ---------- 차트 아래 시장 지표 (공포탐욕, 롱숏, 펀딩비, 미결제약정, 김치 프리미엄) ---------- */
+  #ind { order:5; flex:none; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; padding:8px 12px 10px; }   /* 좁은 창에서도 한 줄 (두 줄이면 차트가 줄어듦) */
+  #ind .ic { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px 8px; min-width:0; font-variant-numeric:tabular-nums; }
+  #ind .it { font-size:11.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ind .iv { font-size:16px; font-weight:700; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ind .iv small { font-size:12px; font-weight:600; margin-left:4px; }
+  #ind .is { font-size:11px; color:var(--dim); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ind .gbar { position:relative; height:5px; border-radius:3px; margin-top:5px; overflow:hidden; display:flex; }
+  #ind .gbar.fg { background:linear-gradient(to right, #3b82f6, #22c55e 50%, #ef4f4f); overflow:visible; }
+  #ind .gbar.fg i { position:absolute; top:-3px; width:3px; height:11px; border-radius:2px; background:var(--text); transform:translateX(-1px); }
+  #ind .gbar .l { background:var(--up); } #ind .gbar .s { background:var(--down); }
+  /* 엑셀 테마: 시트 칸(#cells) 안 아래쪽에 둠. 창 맨 아래에 붙이면 시트 탭과 상태 표시줄을 가림 */
+  body.excel #ind { position:absolute; left:6px; right:14px; bottom:6px; height:58px; padding:0; gap:0; background:#fff; border:1px solid #bfbfbf;
+    grid-template-columns:repeat(7, 1fr); --panel:#fff; --text:#222; --dim:#666; --line:#d4d4d4; --up:#c00000; --down:#0050c8; }
+  body.excel #ind .ic { border:none; border-right:1px solid #d4d4d4; border-radius:0; padding:3px 6px; }
+  body.excel #ind .ic:last-child { border-right:none; }
+  body.excel #ind .iv { font-size:13px; }
+  body.excel #wrap { bottom:70px; }
+  body.excel.blank #ind { visibility:hidden; }
 </style>
 </head>
 <body>
@@ -190,17 +342,30 @@
 </div>
 <div id="xl-sheets" class="xl-only"><span class="arr">◀ ▶</span><div id="sheettabs"></div><span class="plus">⊕</span></div>
 <div id="xl-status" class="xl-only"><span>준비</span><span id="st-info"></span><span class="zoom">▦ ▣ ▤ &nbsp; − ━━━━●━━━━ + &nbsp;100%</span></div>
+<div id="ind"></div>
+<div id="econ"><div class="elbl" title="미국 경제지표 발표 캘린더 열기">📅 미국 지표</div><div class="evp"><div class="etr"></div></div></div>
+<div id="ecal"><div class="cbx">
+  <div class="chd"><span class="ttl" id="ec-ttl"></span><button id="ec-prev">‹</button><button id="ec-today">오늘</button><button id="ec-next">›</button>
+    <div class="seg"><button id="ec-m">월</button><button id="ec-w">주</button></div><button class="cx" id="ec-x">×</button></div>
+  <div class="cmain" id="ec-main"></div>
+  <div class="clist" id="ec-list"></div>
+  <div class="cfoot">시간은 한국 시간. 일정 출처: 미국 노동통계국(BLS), 경제분석국(BEA), 연준. 수치는 BLS 최신 수정치 기준이라 처음 발표된 숫자와 다를 수 있음</div>
+</div></div>
 <script src="lightweight-charts.js"></script>
+<script src="econ_events.js"></script>
 <script>
-// 윈도우판(pywebview) 연결: 바지트판은 window.webkit이 있어서 이 부분을 건너뜀
-if (!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mjcoin)) {
+// 파이썬으로 보내기: 바지트판(WebKitGTK)은 window.webkit 의 mjcoin 통로, 윈도우·맥판(pywebview)은 pywebview.api.post
+// 맥판 pywebview 는 window.webkit 을 자기 통로로 쓰므로 window.webkit 을 덮어쓰면 안 됨 (덮어써서 차트 요청이 전부 끊긴 적 있음)
+window.mjPost = (() => {
+  const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mjcoin;
+  if (h) return m => h.postMessage(m);
   const q = []; let ready = false;
   const send = m => window.pywebview.api.post(m);
   const go = () => { if (!ready) { ready = true; q.splice(0).forEach(send); } };
   window.addEventListener("pywebviewready", go);
   if (window.pywebview && window.pywebview.api && window.pywebview.api.post) go();
-  window.webkit = { messageHandlers: { mjcoin: { postMessage: m => ready ? send(m) : q.push(m) } } };
-}
+  return m => ready ? send(m) : q.push(m);
+})();
 window.mjWsBatch = arr => arr.forEach(t => window.mjWs(t));
 // 기본 종목 (코인 5 + 주식 1). + 버튼으로 추가한 목록은 localStorage "mjCoins"에 저장
 const DEFAULT_COINS = [["KRW-BTC","비트코인"],["USDT-BTC","비트코인"],["KRW-ETH","이더리움"],["KRW-XRP","리플"],["KRW-BCH","비트코인캐시"],["KRW-SOL","솔라나"],["STOCK-000660","SK하이닉스"]];
@@ -239,6 +404,21 @@ topEl.appendChild(lbl);
 const addCard = Object.assign(document.createElement("div"), {className:"coin addcard", textContent:"+", title:"코인 추가"});
 addCard.onclick = () => openPicker();
 topEl.appendChild(addCard);
+// 좌우 넘김 버튼 < >: 순서는 CSS order 로 맨 앞·맨 끝에 고정 (카드를 추가·이동해도 그대로)
+const arrowL = Object.assign(document.createElement("div"), {className:"tarrow l", textContent:"‹", title:"앞으로"});
+const arrowR = Object.assign(document.createElement("div"), {className:"tarrow r", textContent:"›", title:"뒤로"});
+topEl.append(arrowL, arrowR);
+const scrollTop_ = dir => topEl.scrollBy({ left: dir * Math.max(160, topEl.clientWidth - 120), behavior:"smooth" });
+arrowL.onclick = () => scrollTop_(-1); arrowR.onclick = () => scrollTop_(1);
+function updateArrows() {
+  const over = !excel && topEl.scrollWidth > topEl.clientWidth + 1;
+  topEl.classList.toggle("over", over);
+  arrowL.classList.toggle("off", topEl.scrollLeft <= 1);
+  arrowR.classList.toggle("off", topEl.scrollLeft + topEl.clientWidth >= topEl.scrollWidth - 1);
+}
+topEl.addEventListener("scroll", updateArrows);
+window.addEventListener("resize", updateArrows);
+new MutationObserver(() => requestAnimationFrame(updateArrows)).observe(topEl, { childList:true });
 function makeCard(code, name) {
   const d = document.createElement("div"); d.className = "coin"; d.id = "c-"+code;
   d.innerHTML = `<div class="name">${name} <span style="opacity:.6">${symOf(code)}</span></div>
@@ -432,7 +612,7 @@ function fmtTime(t) {
 }
 let notified = { key:"" };
 function notify(title, body) {
-  try { window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({ notify:{ title, body } })); } catch (e) {}
+  try { window.mjPost(JSON.stringify({ notify:{ title, body } })); } catch (e) {}
 }
 function updateIndicators() {
   if (!candles.length) return;
@@ -659,7 +839,7 @@ const pending = new Map(); let reqId = 0;
 function nativeGet(u) {
   return new Promise((ok, fail) => {
     const id = ++reqId; pending.set(id, {ok, fail});
-    window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({id, url:u}));
+    window.mjPost(JSON.stringify({id, url:u}));
     setTimeout(() => { if (pending.has(id)) { pending.delete(id); fail(new Error("시간 초과")); } }, 15000);
   });
 }
@@ -667,7 +847,9 @@ window.mjReply = (id, status, body) => {
   const p = pending.get(id); if (!p) return; pending.delete(id);
   if (status === 200) p.ok(JSON.parse(body)); else p.fail(new Error("HTTP " + status));
 };
+const PRICES = {};   // 종목별 마지막 현재가 (주문 창에서 씀)
 function setCard(code, price, rate, change) {   // rate: 0.0123 = 1.23%
+  PRICES[code] = Number(price);
   const el = document.getElementById("c-"+code); if (!el) return;
   el.querySelector(".price").textContent = fmtIn(code, price) + (code.startsWith("USDT-") ? "" : "원");   // USDT는 카드 제목에 BTC/USDT로 표시
   const chg = el.querySelector(".chg"), r = rate*100;
@@ -755,7 +937,7 @@ function setTheme(on) {
   const bbEdge = on ? "#000000" : "rgba(45,212,191,.85)", bbCenter = on ? "#000000" : "rgba(250,204,21,.8)";
   bbUp.applyOptions({ color:bbEdge }); bbLo.applyOptions({ color:bbEdge }); bbMid.applyOptions({ color:bbCenter });
   document.title = on ? XL_TITLE : "MJ코인";
-  fitXl();
+  fitXl(); updateArrows();
   themeBtns.forEach(b => { b.classList.toggle("on", b.isXl === on); (on ? document.getElementById("bar3") : bar).appendChild(b); });
   try { localStorage.setItem("mjTheme", on ? "excel" : "dark"); } catch (e) {}
 }
@@ -768,7 +950,7 @@ setTheme(savedTheme === "excel");
 // ---------- 코인 추가 / 빼기 ----------
 // 업비트 실시간 구독 목록을 파이썬에 알려 줌 (새 목록을 보내면 업비트가 구독을 통째로 바꿈, 시험으로 확인)
 function sendSubscribe() {
-  try { window.webkit.messageHandlers.mjcoin.postMessage(JSON.stringify({ subscribe: COINS.map(c => c[0]).filter(c => /^(KRW|USDT|BTC)-/.test(c)) })); } catch (e) {}
+  try { window.mjPost(JSON.stringify({ subscribe: COINS.map(c => c[0]).filter(c => /^(KRW|USDT|BTC)-/.test(c)) })); } catch (e) {}
 }
 function afterListChange() { saveCoins(); buildTabs(); refreshTabs(); sendSubscribe(); fitXl(); }
 function addCoin(code, name) {
@@ -834,6 +1016,565 @@ async function openPicker() {
     } catch (e) { plist.textContent = "목록을 못 불러왔어요: " + e; return; }
   }
   drawList();
+}
+
+// ---------- 업비트 연결과 주문 ----------
+// 업비트에는 계정 로그인 연동이 없어서 Open API 키로 연결. 키 저장, 서명, 주문은 모두 파이썬이 함
+// 파이썬이 window.mjTradeReady() 를 불러 줄 때만 "업비트 주문" 버튼이 보임 (지금은 맥판만)
+const T = { connected:false, side:"bid", kind:"limit", mk:null, chance:null, orders:[], timer:null, busy:false };
+const tPending = new Map();
+function tradeCall(t) {
+  return new Promise(ok => {
+    const id = ++reqId; tPending.set(id, ok);
+    window.mjPost(JSON.stringify({ id, trade:t }));
+    setTimeout(() => { if (tPending.has(id)) { tPending.delete(id);
+      ok({ status:0, data:{ error:{ name:"timeout", message:"응답을 받지 못했습니다" } } }); } }, 25000);
+  });
+}
+window.mjTradeReply = (id, status, body) => {
+  const ok = tPending.get(id); if (!ok) return; tPending.delete(id);
+  let data; try { data = JSON.parse(body); } catch (e) { data = { error:{ name:"parse", message:String(body).slice(0, 200) } }; }
+  ok({ status, data });
+};
+const isOk = r => r.status === 200 || r.status === 201;
+function errText(r) {
+  const e = r.data && r.data.error, name = (e && e.name) || "", msg = (e && e.message) || name || ("HTTP " + r.status);
+  const hint = {
+    invalid_access_key: "Access Key가 맞지 않습니다. 업비트에서 복사한 값을 다시 확인해 주세요.",
+    jwt_verification: "Secret Key가 맞지 않습니다. 업비트에서 복사한 값을 다시 확인해 주세요.",
+    no_authorization_ip: "이 컴퓨터의 IP가 업비트 키의 허용 IP에 없습니다. 업비트 Open API 관리에서 지금 쓰는 공인 IP를 추가해 주세요.",
+    out_of_scope: "키 권한이 부족합니다. 자산조회, 주문조회, 주문하기 권한을 켜 주세요.",
+    insufficient_funds_bid: "주문 가능 원화가 부족합니다 (수수료 포함).",
+    insufficient_funds_ask: "주문 가능 수량이 부족합니다.",
+    under_min_total_bid: "최소 주문 금액보다 작습니다.",
+    under_min_total_ask: "최소 주문 금액보다 작습니다.",
+  }[name];
+  return hint ? `${hint}\n(업비트: ${msg})` : msg;
+}
+// 원화 마켓 호가 단위 (업비트 문서, 2025-07-31 바뀐 표)
+const KRW_TICKS = [[1e6,1000],[5e5,500],[1e5,100],[5e4,50],[1e4,10],[5e3,5],[100,1],[10,0.1],[1,0.01],[0.1,0.001],[0.01,0.0001],
+  [0.001,0.00001],[0.0001,0.000001],[0.00001,0.0000001]];
+const krwTick = p => { for (const [m, t] of KRW_TICKS) if (p >= m) return t; return 0.00000001; };
+const tickDp = t => t >= 1 ? 0 : Math.round(-Math.log10(t));
+function snapPrice(p) { const t = krwTick(p); return Number((Math.floor(p/t + 1e-9) * t).toFixed(tickDp(t))); }
+const floor8 = v => Math.floor(v * 1e8 + 1e-6) / 1e8;
+// 업비트에 보낼 숫자 글자 (지수 표기 없이). 소수점 뒤의 0만 지움 (88850000 이 8885 가 되면 안 됨)
+function numStr(v, dp) { const s = Number(v).toFixed(dp); return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
+const fmtKrw = v => v == null || isNaN(v) ? "-" : Math.floor(v).toLocaleString("ko-KR") + "원";
+const fmtQty = v => v == null || isNaN(v) ? "-" : Number(v).toLocaleString("ko-KR", { maximumFractionDigits:8 });
+const parseNum = s => { const v = Number(String(s).replace(/,/g, "").trim()); return isFinite(v) ? v : NaN; };
+
+// 화면 만들기
+const tradeBtn = Object.assign(document.createElement("button"), { id:"tradeBtn", textContent:"업비트 주문" });
+bar.insertBefore(tradeBtn, info);
+const tradeEl = document.createElement("div"); tradeEl.id = "trade";
+tradeEl.innerHTML = `<div class="thead"><b>업비트 주문</b><span class="tclose" title="닫기">×</span></div>
+<div class="tbody">
+  <div id="t-login">
+    <p class="tnote">업비트에는 계정 로그인 연동이 없어서, 업비트 홈페이지 마이페이지의 <b>Open API 관리</b>에서 발급한 키로 연결합니다.</p>
+    <ul class="tnote">
+      <li>권한은 <b>자산조회, 주문조회, 주문하기</b>만 켜 주세요. <b>출금 권한은 켜지 마세요.</b></li>
+      <li>허용 IP에 이 컴퓨터가 쓰는 <b>공인 IP</b>를 넣어야 합니다. 인터넷이 바뀌면 다시 넣어야 합니다.</li>
+      <li>키는 이 맥의 <b>키체인</b>에만 저장되고 파일로 남지 않습니다.</li>
+    </ul>
+    <label>Access Key<input id="t-ak" autocomplete="off" spellcheck="false"></label>
+    <label>Secret Key<input id="t-sk" type="password" autocomplete="off" spellcheck="false"></label>
+    <button id="t-conn" class="tbtn main">연결</button>
+    <div id="t-lmsg" class="tmsg"></div>
+  </div>
+  <div id="t-main" style="display:none">
+    <div class="trow"><span id="t-who"></span><button id="t-out" class="tlink">연결 해제</button></div>
+    <div id="t-mk" class="tmk"></div>
+    <div id="t-nomk" class="tmsg"></div>
+    <div id="t-form">
+      <div class="tseg" id="t-side"><button data-v="bid">매수</button><button data-v="ask">매도</button></div>
+      <div class="tseg" id="t-kind"><button data-v="limit">지정가</button><button data-v="mkt">시장가</button></div>
+      <div class="tbal"><span>주문 가능</span><b id="t-avail">-</b></div>
+      <div class="tbal"><span>보유</span><b id="t-hold">-</b></div>
+      <label id="t-pl">가격 (원)<input id="t-price" inputmode="decimal"></label>
+      <label id="t-vl">수량<input id="t-vol" inputmode="decimal"></label>
+      <label id="t-al">총액 (원)<input id="t-amt" inputmode="decimal"></label>
+      <div class="tpct"><button data-p="10">10%</button><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="100">최대</button></div>
+      <div class="tbal"><span id="t-totl">주문 총액</span><b id="t-total">-</b></div>
+      <div class="tbal"><span>수수료 (예상)</span><b id="t-fee">-</b></div>
+      <button id="t-go" class="tbtn bid">매수</button>
+      <div id="t-msg" class="tmsg"></div>
+    </div>
+    <div id="t-ordbox">
+      <div class="tsub"><span>미체결 주문</span><button id="t-reload" class="tlink">새로고침</button></div>
+      <div id="t-orders" class="tmsg">-</div>
+    </div>
+  </div>
+</div>`;
+document.body.appendChild(tradeEl);
+const tconfirm = document.createElement("div"); tconfirm.id = "tconfirm";
+tconfirm.innerHTML = `<div class="cbox"><b id="tc-title"></b><div id="tc-body"></div>
+  <div class="cbtns"><button id="tc-no">취소</button><button id="tc-yes">확인</button></div></div>`;
+document.body.appendChild(tconfirm);
+const $t = id => document.getElementById(id);
+
+// 확인창 (브라우저 confirm 대신 화면 안에서 띄움)
+function askConfirm(title, body, yesText, cls) {
+  return new Promise(res => {
+    $t("tc-title").textContent = title; $t("tc-body").textContent = body;
+    const yes = $t("tc-yes"); yes.textContent = yesText; yes.className = cls || "";
+    tconfirm.classList.add("show");
+    const done = v => { tconfirm.classList.remove("show"); yes.onclick = $t("tc-no").onclick = tconfirm.onclick = null; res(v); };
+    yes.onclick = () => done(true); $t("tc-no").onclick = () => done(false);
+    tconfirm.onclick = e => { if (e.target === tconfirm) done(false); };
+  });
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && tconfirm.classList.contains("show")) $t("tc-no").click(); });
+
+window.mjTradeReady = async () => {
+  tradeBtn.classList.add("ready");
+  const r = await tradeCall({ op:"status" });
+  if (isOk(r)) setConnected(r.data.connected, r.data.access);
+};
+tradeBtn.onclick = () => { tradeEl.classList.contains("show") ? closeTrade() : openTrade(); };
+tradeEl.querySelector(".tclose").onclick = () => closeTrade();
+function openTrade() { tradeEl.classList.add("show"); tradeBtn.classList.add("on"); if (T.connected) tradeMarket(true); }
+function closeTrade() { tradeEl.classList.remove("show"); tradeBtn.classList.remove("on"); clearInterval(T.timer); T.timer = null; }
+function setConnected(on, who) {
+  T.connected = !!on;
+  $t("t-login").style.display = on ? "none" : "";
+  $t("t-main").style.display = on ? "" : "none";
+  $t("t-who").textContent = on ? "업비트 연결됨 · 키 " + (who || "") : "";
+  tradeBtn.textContent = on ? "업비트 주문" : "업비트 연결";
+  if (on && tradeEl.classList.contains("show")) tradeMarket(true);
+  if (!on) { clearInterval(T.timer); T.timer = null; }
+}
+$t("t-conn").onclick = async () => {
+  const a = $t("t-ak").value.trim(), s = $t("t-sk").value.trim(), m = $t("t-lmsg");
+  if (!a || !s) { m.className = "tmsg bad"; m.textContent = "Access Key와 Secret Key를 모두 넣어 주세요."; return; }
+  $t("t-conn").disabled = true; m.className = "tmsg"; m.textContent = "업비트에 확인하는 중…";
+  const r = await tradeCall({ op:"connect", access:a, secret:s });
+  $t("t-conn").disabled = false;
+  if (isOk(r)) { $t("t-sk").value = ""; $t("t-ak").value = ""; m.textContent = "";
+    const st = await tradeCall({ op:"status" }); setConnected(true, isOk(st) ? st.data.access : ""); }
+  else { m.className = "tmsg bad"; m.textContent = "연결 실패: " + errText(r); }
+};
+$t("t-out").onclick = async () => {
+  if (!await askConfirm("업비트 연결 해제", "이 맥의 키체인에서 업비트 키를 지웁니다.\n다시 쓰려면 키를 새로 넣어야 합니다.", "연결 해제")) return;
+  await tradeCall({ op:"disconnect" }); setConnected(false);
+};
+
+// 지금 보는 종목으로 주문 창 채우기
+async function tradeMarket(reset) {
+  const mk = market, name = (COINS.find(c => c[0] === mk) || [, mk])[1];
+  const okMk = /^KRW-/.test(mk);
+  $t("t-mk").textContent = `${name} ${symOf(mk)}`;
+  $t("t-form").style.display = $t("t-ordbox").style.display = okMk ? "" : "none";
+  $t("t-nomk").textContent = okMk ? "" : (isStock(mk) ? "주식은 시세만 볼 수 있고 주문은 안 됩니다." : "지금은 원화(KRW) 마켓 코인만 주문할 수 있습니다.");
+  if (T.mk !== mk || reset) {
+    T.mk = mk; T.chance = null; T.orders = [];
+    $t("t-price").value = $t("t-vol").value = $t("t-amt").value = ""; $t("t-msg").textContent = "";
+    if (okMk && PRICES[mk]) $t("t-price").value = numStr(snapPrice(PRICES[mk]), tickDp(krwTick(PRICES[mk])));
+  }
+  drawForm();
+  clearInterval(T.timer); T.timer = null;
+  if (!okMk) return;
+  await refreshTrade();
+  T.timer = setInterval(() => { if (!T.busy) refreshTrade(); }, 5000);   // 열려 있는 동안 잔고·미체결 5초마다
+}
+async function refreshTrade() {
+  const mk = T.mk; if (!T.connected || !/^KRW-/.test(mk || "")) return;
+  const [c, o] = await Promise.all([tradeCall({ op:"chance", market:mk }), tradeCall({ op:"open", market:mk })]);
+  if (mk !== T.mk) return;
+  if (isOk(c)) T.chance = c.data; else { $t("t-msg").className = "tmsg bad"; $t("t-msg").textContent = errText(c); }
+  if (isOk(o) && Array.isArray(o.data)) T.orders = o.data;
+  drawForm(); drawOrders();
+}
+const fee = side => Number(T.chance && (side === "bid" ? T.chance.bid_fee : T.chance.ask_fee)) || 0;
+const minTotal = side => Number(T.chance && T.chance.market && T.chance.market[side] && T.chance.market[side].min_total) || 5000;
+const availKrw = () => Number(T.chance && T.chance.bid_account && T.chance.bid_account.balance) || 0;
+const availCoin = () => Number(T.chance && T.chance.ask_account && T.chance.ask_account.balance) || 0;
+const kindOf = () => T.kind === "limit" ? "limit" : (T.side === "bid" ? "price" : "market");
+function drawForm() {
+  if (!T.mk) return;
+  const sym = symOf(T.mk), k = kindOf(), bid = T.side === "bid";
+  $t("t-side").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === T.side));
+  $t("t-kind").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === T.kind));
+  $t("t-avail").textContent = !T.chance ? "-" : bid ? fmtKrw(availKrw()) : `${fmtQty(availCoin())} ${sym}`;
+  const acc = T.chance && T.chance.ask_account, held = acc ? Number(acc.balance) + Number(acc.locked) : 0;
+  $t("t-hold").textContent = !T.chance ? "-" : `${fmtQty(held)} ${sym}` + (acc && Number(acc.avg_buy_price) ? ` · 평균 ${fmtPrice(Number(acc.avg_buy_price))}원` : "");
+  $t("t-pl").style.display = k === "limit" ? "" : "none";
+  $t("t-vl").style.display = k === "price" ? "none" : "";
+  $t("t-al").style.display = k === "market" ? "none" : "";
+  $t("t-vl").firstChild.textContent = `수량 (${sym})`;
+  $t("t-al").firstChild.textContent = k === "price" ? "매수 금액 (원)" : "총액 (원)";
+  $t("t-totl").textContent = k === "market" ? "예상 받을 금액 (현재가 기준)" : "주문 총액";
+  const tot = orderTotal();
+  $t("t-total").textContent = tot ? fmtKrw(tot) : "-";
+  $t("t-fee").textContent = tot && T.chance ? fmtKrw(tot * fee(T.side)) + ` (${numStr(fee(T.side)*100, 3)}%)` : "-";
+  const go = $t("t-go"); go.className = "tbtn " + T.side; go.textContent = (T.kind === "limit" ? "지정가 " : "시장가 ") + (bid ? "매수" : "매도");
+  go.disabled = T.busy;
+}
+function orderTotal() {
+  const k = kindOf(), p = parseNum($t("t-price").value), v = parseNum($t("t-vol").value), a = parseNum($t("t-amt").value);
+  if (k === "limit") return p > 0 && v > 0 ? p * v : 0;
+  if (k === "price") return a > 0 ? a : 0;
+  return v > 0 && PRICES[T.mk] ? v * PRICES[T.mk] : 0;
+}
+$t("t-side").onclick = e => { const v = e.target.dataset.v; if (v) { T.side = v; $t("t-vol").value = $t("t-amt").value = ""; drawForm(); } };
+$t("t-kind").onclick = e => { const v = e.target.dataset.v; if (v) { T.kind = v; $t("t-vol").value = $t("t-amt").value = "";
+  if (v === "limit" && !$t("t-price").value && PRICES[T.mk]) $t("t-price").value = numStr(snapPrice(PRICES[T.mk]), tickDp(krwTick(PRICES[T.mk])));
+  drawForm(); } };
+// 가격·수량을 바꾸면 총액을, 총액을 바꾸면 수량을 맞춤 (지정가)
+$t("t-price").oninput = $t("t-vol").oninput = () => {
+  if (kindOf() === "limit") { const p = parseNum($t("t-price").value), v = parseNum($t("t-vol").value);
+    $t("t-amt").value = p > 0 && v > 0 ? Math.floor(p * v) : ""; }
+  drawForm(); };
+$t("t-amt").oninput = () => {
+  if (kindOf() === "limit") { const p = parseNum($t("t-price").value), a = parseNum($t("t-amt").value);
+    $t("t-vol").value = p > 0 && a > 0 ? numStr(floor8(a / p), 8) : ""; }
+  drawForm(); };
+$t("t-price").onchange = () => { const p = parseNum($t("t-price").value);   // 호가 단위에 맞게 내림
+  if (p > 0) { const s = snapPrice(p); $t("t-price").value = numStr(s, tickDp(krwTick(s))); $t("t-price").oninput(); } };
+tradeEl.querySelector(".tpct").onclick = e => {
+  const pct = Number(e.target.dataset.p); if (!pct || !T.chance) return;
+  const k = kindOf();
+  if (T.side === "bid") {     // 매수는 수수료를 빼고 계산 (100% 그대로 넣으면 수수료만큼 모자라 거절됨)
+    const a = Math.floor(availKrw() * pct / 100 / (1 + fee("bid")));
+    $t("t-amt").value = a > 0 ? a : ""; $t("t-amt").oninput();
+  } else {
+    const v = floor8(availCoin() * pct / 100);
+    $t("t-vol").value = v > 0 ? numStr(v, 8) : ""; $t("t-vol").oninput();
+  }
+  if (k === "market") drawForm();
+};
+$t("t-go").onclick = async () => {
+  const m = $t("t-msg"), k = kindOf(), bid = T.side === "bid", sym = symOf(T.mk), name = (COINS.find(c => c[0] === T.mk) || [, T.mk])[1];
+  const bad = t => { m.className = "tmsg bad"; m.textContent = t; };
+  if (!T.chance) return bad("잔고를 아직 못 불러왔습니다. 잠시 뒤 다시 눌러 주세요.");
+  let p = parseNum($t("t-price").value), v = parseNum($t("t-vol").value), a = parseNum($t("t-amt").value);
+  const body = { op:"order", market:T.mk, side:T.side, ord_type:k };
+  let lines;
+  if (k === "limit") {
+    if (!(p > 0)) return bad("가격을 넣어 주세요.");
+    p = snapPrice(p); v = floor8(v);
+    if (!(v > 0)) return bad("수량을 넣어 주세요.");
+    body.price = numStr(p, tickDp(krwTick(p))); body.volume = numStr(v, 8);
+    lines = `가격  ${fmtPrice(p)}원\n수량  ${fmtQty(v)} ${sym}\n총액  ${fmtKrw(p * v)}`;
+    a = p * v;
+  } else if (k === "price") {
+    a = Math.floor(a);
+    if (!(a > 0)) return bad("매수 금액을 넣어 주세요.");
+    body.price = String(a);
+    lines = `매수 금액  ${fmtKrw(a)}\n지금 시장에 나온 가격으로 바로 삽니다.`;
+  } else {
+    v = floor8(v);
+    if (!(v > 0)) return bad("수량을 넣어 주세요.");
+    body.volume = numStr(v, 8);
+    a = PRICES[T.mk] ? v * PRICES[T.mk] : 0;
+    lines = `수량  ${fmtQty(v)} ${sym}\n예상 금액  ${a ? fmtKrw(a) : "-"} (현재가 기준)\n지금 시장에 나온 가격으로 바로 팝니다.`;
+  }
+  const min = minTotal(T.side);
+  if (a && a < min) return bad(`최소 주문 금액은 ${fmtKrw(min)}입니다.`);
+  if (bid && a * (1 + fee("bid")) > availKrw() + 1) return bad("주문 가능 원화가 부족합니다 (수수료 포함).");
+  if (!bid && v > availCoin()) return bad("주문 가능 수량이 부족합니다.");
+  lines += `\n수수료  약 ${fmtKrw(a * fee(T.side))}`;
+  const title = `${name} ${sym}  ${k === "limit" ? "지정가" : "시장가"} ${bid ? "매수" : "매도"}`;
+  if (!await askConfirm(title, lines, bid ? "매수 주문" : "매도 주문", T.side)) return;
+  T.busy = true; drawForm(); m.className = "tmsg"; m.textContent = "주문 보내는 중…";
+  const r = await tradeCall(body);
+  T.busy = false;
+  if (isOk(r)) {
+    m.className = "tmsg good";
+    m.textContent = `주문 접수됨 (${{ wait:"체결 대기", watch:"예약 대기", done:"체결 완료", cancel:"취소됨" }[r.data.state] || r.data.state || ""})`;
+    if (k !== "limit") $t("t-vol").value = $t("t-amt").value = "";
+  } else if (r.data && r.data.error && r.data.error.name === "timeout") {
+    bad("주문 결과를 받지 못했습니다. 주문이 들어갔을 수 있으니 미체결 주문과 잔고를 확인한 뒤 다시 하세요.");
+  } else bad("주문 실패: " + errText(r));
+  drawForm(); setTimeout(refreshTrade, 600);
+};
+function drawOrders() {
+  const box = $t("t-orders");
+  if (!T.orders.length) { box.className = "tmsg"; box.textContent = "없음"; return; }
+  box.className = ""; box.replaceChildren(...T.orders.map(o => {
+    const row = document.createElement("div"); row.className = "tord";
+    const s = Object.assign(document.createElement("span"), { className:"s " + o.side, textContent: o.side === "bid" ? "매수" : "매도" });
+    const d = document.createElement("div"); d.className = "d";
+    const t = new Date(o.created_at), hm = isNaN(t) ? "" : t.toLocaleString("ko-KR", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", hour12:false });
+    d.innerHTML = `<b>${o.price != null ? fmtPrice(Number(o.price)) + "원" : "시장가"}</b> · 남은 ${fmtQty(Number(o.remaining_volume))} / ${fmtQty(Number(o.volume || 0))}<br>${hm}`;
+    const c = Object.assign(document.createElement("button"), { textContent:"취소" });
+    c.onclick = async () => {
+      if (!await askConfirm("주문 취소", `${o.side === "bid" ? "매수" : "매도"} ${o.price != null ? fmtPrice(Number(o.price)) + "원" : ""}\n남은 수량 ${fmtQty(Number(o.remaining_volume))} ${symOf(o.market)}`, "주문 취소")) return;
+      c.disabled = true;
+      const r = await tradeCall({ op:"cancel", uuid:o.uuid });
+      const m = $t("t-msg");
+      if (isOk(r)) { m.className = "tmsg good"; m.textContent = "취소 접수됨"; } else { m.className = "tmsg bad"; m.textContent = "취소 실패: " + errText(r); }
+      setTimeout(refreshTrade, 600);
+    };
+    row.append(s, d, c); return row;
+  }));
+}
+$t("t-reload").onclick = () => refreshTrade();
+// 위 카드나 시트 탭에서 종목을 바꾸면 주문 창도 그 종목으로
+const _refreshTabsT = refreshTabs;
+refreshTabs = function () { _refreshTabsT(); if (tradeEl.classList.contains("show") && T.connected && T.mk !== market) tradeMarket(); };
+
+{ // ---------- 미국 경제지표: 흐르는 띠와 발표 캘린더 ----------
+// 일정은 econ_events.js (window.ECON_EVENTS, 시간은 UTC), 발표 수치는 파이썬이 BLS 에서 받아 줌 ({econ:{force}})
+const EK = {
+  cpi:   { n:"CPI 소비자물가", s:"CPI", c:"#ef4f4f" },
+  ppi:   { n:"PPI 생산자물가", s:"PPI", c:"#f59e0b" },
+  nfp:   { n:"고용보고서 (비농업 고용, 실업률)", s:"고용", c:"#22c55e" },
+  jolts: { n:"JOLTS 구인건수", s:"JOLTS", c:"#14b8a6" },
+  eci:   { n:"고용비용지수 (ECI)", s:"ECI", c:"#a78bfa" },
+  gdp:   { n:"GDP 국내총생산", s:"GDP", c:"#3b82f6" },
+  pce:   { n:"PCE 물가, 개인소득·지출", s:"PCE", c:"#ec4899" },
+  fomc:  { n:"FOMC 금리 결정", s:"FOMC", c:"#ca8a04" },
+};
+const EV = (window.ECON_EVENTS || []).filter(e => EK[e.k]).map(e => Object.assign({}, e, { ms:Date.parse(e.t) }));
+const KST = 9 * 3600e3, DAY = 86400e3, WD = ["일","월","화","수","목","금","토"];
+const kd = ms => new Date(ms + KST);                       // 한국 시간 값을 UTC 함수로 읽음
+const dayKey = ms => kd(ms).toISOString().slice(0, 10);    // 한국 날짜 "2026-11-17"
+const keyMs = k => Date.parse(k + "T00:00:00Z") - KST;     // 한국 날짜 0시의 실제 시각
+const hm = ms => kd(ms).toISOString().slice(11, 16);
+const md = ms => { const d = kd(ms); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${WD[d.getUTCDay()]})`; };
+const refName = r => !r ? "" : r.includes("-Q") ? `${+r.slice(-1)}분기분` : `${+r.slice(5)}월분`;
+const refPrev = (r, n) => {
+  if (r.includes("-Q")) { const i = +r.slice(0, 4) * 4 + +r.slice(-1) - 1 - n; return `${Math.floor(i / 4)}-Q${i % 4 + 1}`; }
+  const i = +r.slice(0, 4) * 12 + +r.slice(5) - 1 - n; return `${Math.floor(i / 12)}-${String(i % 12 + 1).padStart(2, "0")}`;
+};
+let ECON = null;   // {series:{id:[[기간, 값], ...]}}
+const sv = (id, r) => { const a = ECON && ECON.series[id]; if (!a) return null; const x = a.find(p => p[0] === r); const v = x ? Number(x[1]) : NaN; return isFinite(v) ? v : null; };   // BLS 는 발표 안 된 달을 "-" 로 줌 (2025년 10월 셧다운)
+const pct = (a, b) => a == null || b == null ? null : (a / b - 1) * 100;
+const pf = v => v == null ? "?" : (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+// 그 기간 발표 수치 글자. 수치가 아직 없으면 null
+function econVal(k, r) {
+  if (!ECON || !r) return null;
+  const pair = (sa, nsa, lbl) => {
+    const mom = pct(sv(sa, r), sv(sa, refPrev(r, 1))), yoy = pct(sv(nsa, r), sv(nsa, refPrev(r, 12)));
+    if (mom == null && yoy == null) return null;
+    return lbl + [yoy == null ? "" : `전년비 ${pf(yoy)}`, mom == null ? "" : `전월비 ${pf(mom)}`].filter(Boolean).join(" · ");
+  };
+  if (k === "cpi" || k === "ppi") {
+    const ids = k === "cpi" ? ["CUSR0000SA0", "CUUR0000SA0", "CUSR0000SA0L1E", "CUUR0000SA0L1E"] : ["WPSFD4", "WPUFD4", "WPSFD49104", "WPUFD49104"];
+    const a = pair(ids[0], ids[1], ""), b = pair(ids[2], ids[3], "근원 ");
+    return a ? [a, b].filter(Boolean) : null;
+  }
+  if (k === "nfp") {
+    const p = sv("CES0000000001", r), q = sv("CES0000000001", refPrev(r, 1)), u = sv("LNS14000000", r);
+    if (p == null && u == null) return null;
+    const ch = p != null && q != null ? Math.round(p - q) : null;
+    return [`비농업 고용 ${ch == null ? "?" : (ch > 0 ? "+" : "") + (ch * 1000).toLocaleString("ko-KR") + "명"}`, `실업률 ${u == null ? "?" : u.toFixed(1) + "%"}`];
+  }
+  if (k === "jolts") { const v = sv("JTS000000000000000JOL", r); return v == null ? null : [`구인 ${Math.round(v / 10).toLocaleString("ko-KR")}만 건`]; }
+  if (k === "eci") { const v = sv("CIS1010000000000Q", r); return v == null ? null : [`분기 대비 ${pf(v)}`]; }
+  return null;
+}
+const done = e => e.ms <= Date.now();
+function evLines(e) {   // 발표됐으면 그 수치, 아직이면 이전 수치
+  if (!e.ref) return e.sep ? { t:"경제전망(점도표) 함께 발표" } : null;
+  if (done(e)) { const v = econVal(e.k, e.ref); return v ? { t:v.join(" / "), now:true } : { t:"수치 받는 중" }; }
+  const v = econVal(e.k, refPrev(e.ref, 1)); return v ? { t:"이전 " + v.join(" / ") } : null;
+}
+// ----- 흐르는 띠 -----
+const econEl = document.getElementById("econ"), econTr = econEl.querySelector(".etr");
+function econTicker() {
+  const now = Date.now(), today = dayKey(now), tmr = dayKey(now + DAY);
+  const list = EV.filter(e => e.ms > now - 3 * DAY && e.ms < now + 21 * DAY);
+  const items = list.length ? list.map(e => {
+    const K = EK[e.k], dk = dayKey(e.ms), L = evLines(e);
+    let tag = "", cls = "";
+    if (done(e)) tag = "발표"; else if (dk === today) { tag = "오늘"; cls = "today"; } else if (dk === tmr) { tag = "내일"; cls = "soon"; }
+    else tag = "D-" + Math.round((keyMs(dk) - keyMs(today)) / DAY);
+    return `<span class="eit" data-t="${e.ms}" data-k="${e.k}"><i class="dot" style="background:${K.c}"></i><span class="tag ${cls}">${tag}</span>` +
+      `${md(e.ms)} ${hm(e.ms)} <b>${K.s}</b> ${refName(e.ref)}${L ? ` <span class="${L.now ? "res" : ""}">${L.t}</span>` : ""}</span>`;
+  }).join("") : `<span class="eit">앞으로 3주 안에 잡힌 발표가 없습니다</span>`;
+  if (econTr.dataset.h === items) return;
+  econTr.dataset.h = items;
+  econTr.innerHTML = items + items;   // 두 벌 이어 붙여 끊김 없이 돎
+  requestAnimationFrame(() => econTr.style.setProperty("--dur", Math.max(20, econTr.scrollWidth / 2 / 45) + "s"));
+}
+econTr.onclick = ev => { const it = ev.target.closest(".eit"); if (it && it.dataset.t) openCal(+it.dataset.t, it.dataset.k); };
+econEl.querySelector(".elbl").onclick = () => openCal(Date.now());
+// 엑셀 테마에서는 아래 상태 표시줄 안으로, 기본 테마에서는 차트 위로
+function placeEcon() {
+  if (excel) document.getElementById("xl-status").insertBefore(econEl, stInfo);
+  else document.getElementById("ribbon").after(econEl);
+}
+const _setThemeE = setTheme;
+setTheme = function (on) { _setThemeE(on); placeEcon(); };
+// ----- 수치 받기 -----
+const ePending = new Map(); let eId = 0, eLastForce = 0;
+window.mjEconReply = (id, st, body) => {
+  const f = ePending.get(id); ePending.delete(id);
+  try { const d = JSON.parse(body); if (st === 200 && d.series) { ECON = d; econTicker(); if (calEl.classList.contains("show")) drawCal(); } } catch (e) {}
+};
+function econFetch(force) { const id = ++eId; ePending.set(id, 1); window.mjPost(JSON.stringify({ id, econ:{ force:!!force } })); }
+// 1분마다: 띠 갱신, 발표가 났는데 수치가 아직 없으면 10분 간격으로 다시 받기
+setInterval(() => {
+  econTicker();
+  const now = Date.now();
+  const miss = EV.some(e => e.ref && e.ms <= now - 120e3 && e.ms > now - 6 * 3600e3 && ["cpi","ppi","nfp","jolts","eci"].includes(e.k) && !econVal(e.k, e.ref));
+  if (miss && now - eLastForce > 600e3) { eLastForce = now; econFetch(true); }
+}, 60e3);
+setInterval(() => econFetch(false), 3 * 3600e3);
+// ----- 캘린더 (아이폰 캘린더처럼 월, 주 보기) -----
+const calEl = document.getElementById("ecal"), C = { view:"m", sel:dayKey(Date.now()), hl:null };
+const $c = id => document.getElementById(id);
+function openCal(ms, k) {
+  C.sel = dayKey(ms); C.hl = k ? ms + ":" + k : null;
+  calEl.classList.add("show"); drawCal();
+}
+const closeCal = () => calEl.classList.remove("show");
+$c("ec-x").onclick = closeCal;
+calEl.onclick = e => { if (e.target === calEl) closeCal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && calEl.classList.contains("show")) closeCal(); });
+$c("ec-m").onclick = () => { C.view = "m"; drawCal(); };
+$c("ec-w").onclick = () => { C.view = "w"; drawCal(); };
+$c("ec-today").onclick = () => { C.sel = dayKey(Date.now()); C.hl = null; drawCal(); };
+const shiftKey = (k, days) => dayKey(keyMs(k) + days * DAY + 3600e3);
+function shiftMonth(k, n) { let y = +k.slice(0, 4), m = +k.slice(5, 7) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return `${y}-${String(m + 1).padStart(2, "0")}-01`; }
+$c("ec-prev").onclick = () => { C.sel = C.view === "m" ? shiftMonth(C.sel, -1) : shiftKey(C.sel, -7); C.hl = null; drawCal(); };
+$c("ec-next").onclick = () => { C.sel = C.view === "m" ? shiftMonth(C.sel, 1) : shiftKey(C.sel, 7); C.hl = null; drawCal(); };
+const byDay = k => EV.filter(e => dayKey(e.ms) === k);
+const wdOf = k => new Date(k + "T00:00:00Z").getUTCDay();
+function drawCal() {
+  const sel = C.sel, today = dayKey(Date.now()), y = +sel.slice(0, 4), m = +sel.slice(5, 7);
+  $c("ec-ttl").textContent = `${y}년 ${m}월`;
+  $c("ec-m").classList.toggle("on", C.view === "m"); $c("ec-w").classList.toggle("on", C.view === "w");
+  const main = $c("ec-main"); main.innerHTML = "";
+  if (C.view === "m") {
+    const first = `${sel.slice(0, 7)}-01`, start = shiftKey(first, -wdOf(first));
+    main.innerHTML = `<div class="wdays">${WD.map((w, i) => `<div class="${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>`;
+    const g = document.createElement("div"); g.className = "mg";
+    const weeks = Math.ceil((wdOf(first) + new Date(Date.UTC(y, m, 0)).getUTCDate()) / 7);
+    for (let i = 0; i < weeks * 7; i++) {
+      const k = shiftKey(start, i), evs = byDay(k), w = i % 7;
+      const c = document.createElement("div");
+      c.className = "dc" + (k.slice(0, 7) !== sel.slice(0, 7) ? " out" : "") + (k === today ? " today" : "") + (k === sel ? " sel" : "") + (w === 0 ? " sun" : w === 6 ? " sat" : "");
+      c.innerHTML = `<span class="dn">${+k.slice(8)}</span>` + evs.slice(0, 3).map(e => `<span class="chip" style="background:${EK[e.k].c}">${hm(e.ms)} ${EK[e.k].s}</span>`).join("") +
+        (evs.length > 3 ? `<span class="more">+${evs.length - 3}</span>` : "");
+      c.onclick = () => { C.sel = k; C.hl = null; drawCal(); };
+      g.appendChild(c);
+    }
+    main.appendChild(g);
+  } else {
+    const start = shiftKey(sel, -wdOf(sel)), days = [...Array(7)].map((_, i) => shiftKey(start, i));
+    const wv = document.createElement("div"); wv.className = "wv";
+    wv.innerHTML = `<div class="wh"><div></div>${days.map((k, i) => `<div class="${k === today ? "today" : ""} ${k === sel ? "sel" : ""}" data-k="${k}">` +
+      `<div class="${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${WD[i]}</div><span class="dn">${+k.slice(8)}</span></div>`).join("")}</div>`;
+    const wb = document.createElement("div"); wb.className = "wb";
+    const grid = document.createElement("div"); grid.className = "wgrid";
+    const hrs = document.createElement("div"); hrs.innerHTML = [...Array(24)].map((_, h) => `<div class="hr">${h ? (h < 12 ? "오전 " + h : h === 12 ? "오후 12" : "오후 " + (h - 12)) : ""}</div>`).join("");
+    grid.appendChild(hrs);
+    days.forEach(k => {
+      const col = document.createElement("div"); col.className = "wcol"; col.style.height = 24 * 30 + "px";
+      byDay(k).forEach(e => {
+        const d = kd(e.ms), top = (d.getUTCHours() + d.getUTCMinutes() / 60) * 30;
+        const b = document.createElement("div"); b.className = "wev"; b.style.top = top + "px"; b.style.background = EK[e.k].c;
+        b.innerHTML = `<b>${EK[e.k].s}</b><br>${hm(e.ms)}`; b.title = EK[e.k].n;
+        b.onclick = () => { C.sel = k; C.hl = e.ms + ":" + e.k; drawCal(); };
+        col.appendChild(b);
+      });
+      if (k === today) { const n = kd(Date.now()), ln = document.createElement("div"); ln.className = "nowline"; ln.style.top = (n.getUTCHours() + n.getUTCMinutes() / 60) * 30 + "px"; col.appendChild(ln); }
+      col.onclick = ev => { if (ev.target === col) { C.sel = k; C.hl = null; drawCal(); } };
+      grid.appendChild(col);
+    });
+    wb.appendChild(grid); wv.appendChild(wb); main.appendChild(wv);
+    wv.querySelectorAll(".wh [data-k]").forEach(h => h.onclick = () => { C.sel = h.dataset.k; C.hl = null; drawCal(); });
+    // 미국 발표는 한국 밤~새벽이라 저녁 8시 쯤부터 보이게
+    const evMin = Math.min(...days.flatMap(k => byDay(k).map(e => { const d = kd(e.ms); return d.getUTCHours(); })), 20);
+    requestAnimationFrame(() => { wb.scrollTop = Math.max(0, (evMin <= 6 ? 0 : Math.min(evMin, 20)) * 30 - 10); });
+  }
+  // 고른 날 발표 목록
+  const evs = byDay(sel), d = kd(keyMs(sel));
+  $c("ec-list").innerHTML = `<div class="ld">${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${WD[d.getUTCDay()]}요일${sel === today ? " (오늘)" : ""}</div>` +
+    (evs.length ? evs.map(e => {
+      const K = EK[e.k], L = evLines(e);
+      return `<div class="ce ${C.hl === e.ms + ":" + e.k ? "hl" : ""}"><i class="bar" style="background:${K.c}"></i><div class="tm">${hm(e.ms)}</div>` +
+        `<div class="bd"><div class="nm">${K.n} ${refName(e.ref)}</div>` +
+        `<div class="sub">${done(e) ? "발표됨" : "발표 예정"} · 미국 동부 ${new Date(e.ms).toLocaleTimeString("ko-KR", { timeZone:"America/New_York", hour:"numeric", minute:"2-digit" })}</div>` +
+        (L ? `<div class="v">${L.t}</div>` : "") + `</div></div>`;
+    }).join("") : `<div class="none">이날은 잡힌 발표가 없습니다</div>`);
+  const h = $c("ec-list").querySelector(".ce.hl"); if (h) h.scrollIntoView({ block:"nearest" });
+}
+placeEcon(); econTicker(); econFetch(false);
+}
+
+
+{ // ---------- 차트 아래 시장 지표 ----------
+// 공포탐욕지수(alternative.me, 하루 한 번 바뀜), 바이낸스 선물 BTCUSDT 롱숏 비율·펀딩비·미결제약정, 김치 프리미엄(업비트 원화가 ÷ 바이낸스 달러가 × 원달러 환율)
+const indEl = document.getElementById("ind");
+const FG_KO = { "Extreme Fear":"극단적 공포", "Fear":"공포", "Neutral":"중립", "Greed":"탐욕", "Extreme Greed":"극단적 탐욕" };
+const BN = "https://fapi.binance.com";
+const card = (id, title, tip) => `<div class="ic" id="${id}" title="${tip}"><div class="it">${title}</div><div class="iv">불러오는 중</div><div class="is"></div></div>`;
+indEl.innerHTML = [
+  card("i-fg", "공포·탐욕 지수", "alternative.me 비트코인 공포·탐욕 지수 (0 극단적 공포 ~ 100 극단적 탐욕), 하루 한 번 갱신"),
+  card("i-ls", "롱숏 비율 (전체 계정)", "바이낸스 선물 BTCUSDT, 롱 포지션 계정 수 ÷ 숏 포지션 계정 수 (1시간 단위)"),
+  card("i-top", "롱숏 비율 (상위 트레이더)", "바이낸스 선물 BTCUSDT, 상위 20% 트레이더의 롱 포지션 ÷ 숏 포지션 (1시간 단위)"),
+  card("i-fund", "펀딩비", "바이낸스 선물 BTCUSDT 펀딩비. 양수면 롱이 숏에게 지불 (롱 과열), 음수면 반대. 8시간마다 정산"),
+  card("i-oi", "미결제약정", "바이낸스 선물 BTCUSDT 미결제약정 (아직 청산 안 된 계약 수량), 24시간 변화"),
+  card("i-mvrv", "MVRV", "비트코인 시가총액 ÷ 실현 시가총액(코인이 마지막으로 움직인 가격 기준). 1 미만은 역사적 저평가 구간, 3.5 이상은 과열 구간. bitcoin-data.com 무료 자료라 7일 늦게 나옴"),
+  card("i-kp", "김치 프리미엄", "업비트 원화 BTC 가격이 바이낸스 BTC 가격 × 원달러 환율(하나은행, 네이버)보다 몇 % 비싼지"),
+].join("");
+const set = (id, v, s, extra) => { const c = document.getElementById(id); c.querySelector(".iv").innerHTML = v; c.querySelector(".is").innerHTML = s || "";
+  const g = c.querySelector(".gbar"); if (g) g.remove(); if (extra) c.insertAdjacentHTML("beforeend", extra); };
+const fail = id => set(id, `<span class="flat">받기 실패</span>`, "잠시 뒤 다시 시도");
+const n2 = (v, d) => Number(v).toLocaleString("ko-KR", { minimumFractionDigits:d, maximumFractionDigits:d });
+const cls = v => v > 0 ? "up" : v < 0 ? "down" : "flat";
+const sgn = (v, d) => (v > 0 ? "+" : "") + n2(v, d);
+async function indFG() {
+  try {
+    const d = (await nativeGet("https://api.alternative.me/fng/?limit=8")).data, v = +d[0].value;
+    set("i-fg", `${v}<small>${FG_KO[d[0].value_classification] || d[0].value_classification}</small>`,
+      `어제 ${d[1] ? d[1].value : "?"} · 일주일 전 ${d[7] ? d[7].value : "?"}`, `<div class="gbar fg"><i style="left:${v}%"></i></div>`);
+  } catch (e) { fail("i-fg"); }
+}
+async function indLS(id, path) {
+  try {
+    const a = await nativeGet(`${BN}/futures/data/${path}?symbol=BTCUSDT&period=1h&limit=25`), x = a[a.length - 1], p = a[0];
+    const l = +x.longAccount * 100, r = +x.longShortRatio, ch = r - +p.longShortRatio;
+    set(id, `${n2(r, 2)}<small class="${cls(ch)}">${sgn(ch, 2)}</small>`, `롱 ${n2(l, 1)}% · 숏 ${n2(100 - l, 1)}% (24시간 전 대비)`,
+      `<div class="gbar"><span class="l" style="width:${l}%"></span><span class="s" style="flex:1"></span></div>`);
+  } catch (e) { fail(id); }
+}
+async function indFund() {
+  try {
+    const d = await nativeGet(`${BN}/fapi/v1/premiumIndex?symbol=BTCUSDT`), f = +d.lastFundingRate * 100;
+    const left = Math.max(0, d.nextFundingTime - Date.now()), h = Math.floor(left / 3600e3), m = Math.floor(left % 3600e3 / 60e3);
+    set("i-fund", `<span class="${cls(f)}">${sgn(f, 4)}%</span>`, `다음 정산 ${h}시간 ${m}분 뒤 · ${f > 0.01 ? "롱 과열" : f < 0 ? "숏 우세" : "보통"}`);
+  } catch (e) { fail("i-fund"); }
+}
+async function indOI() {
+  try {
+    const a = await nativeGet(`${BN}/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=25`), x = a[a.length - 1], p = a[0];
+    const ch = (+x.sumOpenInterest / +p.sumOpenInterest - 1) * 100;
+    set("i-oi", `${n2(+x.sumOpenInterest, 0)} BTC<small class="${cls(ch)}">${sgn(ch, 2)}%</small>`, `약 ${n2(+x.sumOpenInterestValue / 1e8, 1)}억 달러 (24시간 전 대비)`);
+  } catch (e) { fail("i-oi"); }
+}
+async function indKP() {
+  try {
+    const [up, bn, fx] = await Promise.all([
+      nativeGet("https://api.upbit.com/v1/ticker?markets=KRW-BTC"),
+      nativeGet("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"),
+      nativeGet("https://api.stock.naver.com/marketindex/exchange/FX_USDKRW")]);
+    const k = +up[0].trade_price, u = +bn.price, r = +String(fx.exchangeInfo.closePrice).replace(/,/g, "");
+    const kp = (k / (u * r) - 1) * 100;
+    set("i-kp", `<span class="${cls(kp)}">${sgn(kp, 2)}%</span>`, `환율 ${n2(r, 1)}원 · 바이낸스 $${n2(u, 0)}`);
+  } catch (e) { fail("i-kp"); }
+}
+async function indMVRV() {
+  try {
+    const d = await nativeGet("https://api.bitcoin-data.com/v1/mvrv/last"), v = +d.mvrv;
+    if (!isFinite(v)) throw 0;
+    const zone = v < 1 ? ["저평가", "down"] : v >= 3.5 ? ["과열", "up"] : v >= 2.4 ? ["고평가", "up"] : ["보통", "flat"];
+    set("i-mvrv", `${n2(v, 2)}<small class="${zone[1]}">${zone[0]}</small>`, `${d.d.slice(5).replace("-", "/")} 기준${d.delayed ? " · 무료라 7일 늦음" : ""}`,
+      `<div class="gbar fg"><i style="left:${Math.min(100, Math.max(0, v / 4 * 100))}%"></i></div>`);
+  } catch (e) { fail("i-mvrv"); }
+}
+// 엑셀 테마에서는 시트 칸 안으로, 기본 테마에서는 차트 아래로
+function placeInd() { if (excel) document.getElementById("cells").appendChild(indEl); else document.getElementById("econ").after(indEl); }
+const _setThemeI = setTheme;
+setTheme = function (on) { _setThemeI(on); placeInd(); };
+placeInd();
+const indAll = () => { indLS("i-ls", "globalLongShortAccountRatio"); indLS("i-top", "topLongShortPositionRatio"); indFund(); indOI(); indKP(); };
+indFG(); indAll(); indMVRV();
+setInterval(indAll, 60e3); setInterval(indFG, 10 * 60e3); setInterval(indMVRV, 6 * 3600e3);
 }
 
 refreshTabs(); layout(); load(); stockLoop(); sendSubscribe(); fitXl();

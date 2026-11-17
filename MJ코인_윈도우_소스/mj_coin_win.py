@@ -12,7 +12,9 @@ WS_URL = "wss://api.upbit.com/websocket/v1"
 CODES = ["KRW-BTC", "USDT-BTC", "KRW-ETH", "KRW-XRP", "KRW-BCH", "KRW-SOL"]
 UA = "MJCoin/1.0"
 # 화면이 요청할 수 있는 주소 (업비트 + 네이버 증권)
-ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/")
+ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/",
+           "https://api.alternative.me/", "https://fapi.binance.com/", "https://api.binance.com/",
+           "https://api.bitcoin-data.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV
 LOG = os.path.join(DATA, "mjcoin.log")
 SUB = {"codes": list(CODES), "ws": None, "lock": threading.Lock()}   # 화면에서 코인을 추가/빼면 codes가 바뀜
 
@@ -113,6 +115,68 @@ def toast(title, body):
         log("알림 오류:", e)
 
 
+# ---------- 미국 경제지표 발표 수치 (BLS 공개 API, 키 없이 하루 25번까지) ----------
+# 일정은 web/econ_events.js 에 들어 있고, 여기서는 발표된 수치만 받아 DATA/econ.json 에 저장해 둠
+ECON_SERIES = [
+    "CUSR0000SA0", "CUUR0000SA0", "CUSR0000SA0L1E", "CUUR0000SA0L1E",   # CPI, 근원 CPI (계절조정, 원계열)
+    "WPSFD4", "WPUFD4", "WPSFD49104", "WPUFD49104",                     # PPI 최종수요, 근원 PPI
+    "CES0000000001", "LNS14000000",                                     # 비농업 고용, 실업률
+    "JTS000000000000000JOL", "CIS1010000000000Q",                       # 구인건수, 고용비용지수 분기 변화율
+]
+ECON_FILE = os.path.join(DATA, "econ.json")
+ECON_LOCK = threading.Lock()
+
+
+def econ_get(force):
+    # 평소에는 3시간, 발표 직후 화면이 다시 달라고 하면(force) 10분 지난 것만 새로 받음
+    with ECON_LOCK:
+        cache = None
+        try:
+            with open(ECON_FILE, encoding="utf-8") as f:
+                cache = json.load(f)
+        except Exception:
+            pass
+        age = time.time() - cache.get("fetched", 0) if cache else 1e9
+        if cache and age < (600 if force else 10800):
+            return 200, cache
+        y = int(time.strftime("%Y"))
+        body = json.dumps({"seriesid": ECON_SERIES, "startyear": str(y - 2), "endyear": str(y)}).encode()
+        try:
+            req = urllib.request.Request("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=body,
+                                         headers={"Content-Type": "application/json", "User-Agent": UA})
+            d = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
+            if d.get("status") != "REQUEST_SUCCEEDED":
+                raise RuntimeError(f"{d.get('status')} {d.get('message')}")
+            series = {}
+            for sr in d["Results"]["series"]:
+                pts = []
+                for x in sr.get("data", []):
+                    per = x.get("period", "")
+                    if per.startswith("M") and per != "M13":
+                        pts.append([f"{x['year']}-{per[1:]}", x["value"]])
+                    elif per.startswith("Q"):
+                        pts.append([f"{x['year']}-Q{int(per[1:])}", x["value"]])
+                series[sr["seriesID"]] = pts
+            cache = {"fetched": time.time(), "series": series}
+            with open(ECON_FILE, "w", encoding="utf-8") as f:
+                json.dump(cache, f)
+            log("경제지표 수치 받음:", len(series), "개 시리즈")
+            return 200, cache
+        except Exception as e:
+            log("경제지표 수치 받기 실패:", e)
+            if cache:
+                return 200, dict(cache, stale=True)
+            return 0, {"error": str(e)}
+
+
+def econ_run(rid, force):
+    try:
+        st, body = econ_get(bool(force))
+    except Exception as e:
+        st, body = 0, {"error": str(e)}
+    OUT.call(f"window.mjEconReply({rid}, {st}, {json.dumps(json.dumps(body))})")
+
+
 # ---------- 화면에서 부르는 함수 ----------
 class Api:
     # 화면에서 온 요청: {"id":..,"url":..} 또는 {"notify":{"title":..,"body":..}}
@@ -137,8 +201,11 @@ class Api:
             n = req["notify"]
             threading.Thread(target=toast, args=(n.get("title", "MJ코인"), n.get("body", "")), daemon=True).start()
             return
+        if "econ" in req and isinstance(req.get("id"), int):
+            threading.Thread(target=econ_run, args=(req["id"], (req["econ"] or {}).get("force") if isinstance(req["econ"], dict) else False), daemon=True).start()
+            return
         url = req.get("url", "")
-        if url.startswith(ALLOWED):
+        if url.startswith(ALLOWED) and isinstance(req.get("id"), int):
             threading.Thread(target=self._fetch, args=(req["id"], url), daemon=True).start()
 
     def _fetch(self, rid, url):
