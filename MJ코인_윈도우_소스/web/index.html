@@ -326,6 +326,25 @@
   body.excel #ind .gbar { margin-top:2px; }
   body.excel #wrap { bottom:120px; }
   body.excel.blank #ind { visibility:hidden; }
+
+  /* ---------- 그리기 도구 ---------- */
+  #drawC { position:absolute; inset:0; pointer-events:none; z-index:4; }
+  #wrap.drawing, #wrap.drawing * { cursor:crosshair !important; }
+  #wrap.drawHover, #wrap.drawHover * { cursor:move !important; }
+  #drawPal { display:none; position:absolute; left:10px; top:26px; z-index:6; grid-template-columns:repeat(7, 34px); gap:4px; padding:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.35); }
+  #drawPal.show { display:grid; }
+  #drawPal button { width:34px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid transparent;
+    border-radius:7px; color:var(--text); cursor:pointer; padding:0; }
+  #drawPal button:hover { border-color:var(--line); }
+  #drawPal button.on { background:var(--accent); color:#fff; }
+  #drawPal svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  #drawPal svg .f { fill:currentColor; stroke:none; } #drawPal svg .thin { stroke-width:1.6; }
+  #drawPal svg .box { fill:currentColor; fill-opacity:.35; stroke:none; } #drawPal svg .tx { fill:currentColor; stroke:none; font-weight:700; font-family:sans-serif; }
+  .drawTxt { position:absolute; z-index:7; width:180px; padding:3px 6px; font:13px Pretendard, sans-serif; border:1px solid var(--accent); border-radius:5px;
+    background:var(--panel); color:var(--text); outline:none; }
+  body.excel #drawPal { --panel:#fff; --text:#222; --line:#d5d5d5; --accent:#217346; border-radius:2px; box-shadow:0 4px 14px rgba(0,0,0,.2); }
+  body.excel .drawTxt { --panel:#fff; --text:#222; --accent:#217346; border-radius:0; }
 </style>
 </head>
 <body>
@@ -1580,9 +1599,15 @@ async function indKP() {
     set("i-kp", `<span class="${cls(kp)}">${sgn(kp, 2)}%</span>`, `환율 ${n2(r, 1)}원 · 바이낸스 $${n2(u, 0)}`);
   } catch (e) { fail("i-kp"); }
 }
-async function indMVRV() {
+async function indMVRV() {   // 무료 자료는 시간당 10번까지라 6시간 동안 저장해 둔 값을 씀
   try {
-    const d = await nativeGet("https://api.bitcoin-data.com/v1/mvrv/last"), v = +d.mvrv;
+    let d = null;
+    try { const c = JSON.parse(localStorage.getItem("mjMVRV")); if (c && Date.now() - c.at < 6 * 3600e3) d = c.d; } catch (e) {}
+    if (!d) {
+      try { d = await nativeGet("https://api.bitcoin-data.com/v1/mvrv/last"); if (!isFinite(+d.mvrv)) throw 0; try { localStorage.setItem("mjMVRV", JSON.stringify({ at:Date.now(), d })); } catch (e) {} }
+      catch (e) { const c = JSON.parse(localStorage.getItem("mjMVRV") || "null"); if (!c) throw e; d = c.d; }   // 실패하면 오래된 값이라도
+    }
+    const v = +d.mvrv;
     if (!isFinite(v)) throw 0;
     const zone = v < 1 ? ["저평가", "down"] : v >= 3.5 ? ["과열", "up"] : v >= 2.4 ? ["고평가", "up"] : ["보통", "flat"];
     set("i-mvrv", `${n2(v, 2)}<small class="${zone[1]}">${zone[0]}</small>`, `${d.d.slice(5).replace("-", "/")} 기준${d.delayed ? " · 무료라 7일 늦음" : ""}`,
@@ -1631,6 +1656,326 @@ const indAll = () => { indLS("i-ls", "globalLongShortAccountRatio"); indLS("i-to
   indNaver("i-nq", "https://api.stock.naver.com/index/.IXIC/basic", ""); indNaver("i-dxy", "https://api.stock.naver.com/marketindex/exchange/.DXY", ""); };
 indFG(); indAll(); indMVRV(); indDom(); indWx();
 setInterval(indAll, 60e3); setInterval(indFG, 10 * 60e3); setInterval(indMVRV, 6 * 3600e3); setInterval(indDom, 5 * 60e3); setInterval(indWx, 15 * 60e3);
+}
+
+{ // ---------- 그리기 도구 (업비트 차트 도구처럼) ----------
+// 그린 것은 {봉 시간(t), 가격(p)} 로 저장해서 확대, 이동, 간격 바꾸기에도 같은 자리에 남음. 종목별로 localStorage "mjDraw:종목"
+// 가격 알림은 localStorage "mjAlerts" (종목별), 실시간 가격이 선을 넘으면 바탕화면 알림
+const wrapEl = document.getElementById("wrap");
+const dc = Object.assign(document.createElement("canvas"), { id:"drawC" });
+wrapEl.appendChild(dc);
+const dg = dc.getContext("2d");
+const TOOLS = [
+  ["seg", "선분", 2, '<path d="M4 12h16"/><circle cx="4" cy="12" r="2.2" class="f"/><circle cx="20" cy="12" r="2.2" class="f"/>'],
+  ["ray", "추세선 (오른쪽으로 연장)", 2, '<path d="M5 5l14 14"/><circle cx="5" cy="5" r="2.2" class="f"/><circle cx="14" cy="14" r="2.2" class="f"/>'],
+  ["ext", "연장선 (양쪽으로 연장)", 2, '<path d="M3 3l18 18"/><circle cx="8" cy="8" r="2.2" class="f"/><circle cx="16" cy="16" r="2.2" class="f"/>'],
+  ["hline", "수평선", 1, '<path d="M3 7h18M3 12h18M3 17h18" class="thin"/>'],
+  ["chan", "평행 채널 (세 번 클릭)", 3, '<path d="M3 6h18M3 10h18M3 14h18M3 18h18" class="thin"/>'],
+  ["fib", "피보나치 되돌림", 2, '<path d="M4 5h14M4 10h14M4 15h14M4 20h14" class="thin"/><circle cx="19" cy="20" r="2" class="f"/>'],
+  ["undo", "하나 되돌리기", 0, '<path d="M9 5L5 9l4 4"/><path d="M5 9h9a5 5 0 0 1 0 10h-2"/><text x="6" y="22" font-size="7" class="tx">1</text>'],
+  ["range", "가격 범위 (오르내림 재기)", 2, '<rect x="6" y="4" width="12" height="16" class="box"/><path d="M4 4v16M20 4v16"/><circle cx="4" cy="6" r="1.8" class="f"/><circle cx="20" cy="18" r="1.8" class="f"/>'],
+  ["tri", "삼각형 (세 번 클릭)", 3, '<path d="M12 4L21 19H3z"/>'],
+  ["circ", "원", 2, '<circle cx="12" cy="12" r="8"/>'],
+  ["rect", "사각형", 2, '<rect x="4" y="5" width="16" height="14" rx="1"/>'],
+  ["text", "글자", 1, '<path d="M5 5h14M12 5v14M9 19h6"/>'],
+  ["fibt", "피보나치 시간대", 2, '<path d="M5 4v16M9 4v16M13 4v16M18 4v16" class="thin"/><circle cx="9" cy="9" r="2" class="f"/><circle cx="13" cy="15" r="2" class="f"/>'],
+  ["clear", "이 종목 그림 모두 지우기", 0, '<path d="M9 5L5 9l4 4"/><path d="M5 9h9a5 5 0 0 1 0 10h-2"/><text x="5" y="22" font-size="8" class="tx">*</text>'],
+];
+const NEED = Object.fromEntries(TOOLS.map(t => [t[0], t[2]]));
+const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+const FIBC = ["#9ca3af", "#ef4444", "#f59e0b", "#22c55e", "#14b8a6", "#3b82f6", "#9ca3af"];
+const FIBT = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+// ----- 도구판 -----
+const pal = Object.assign(document.createElement("div"), { id:"drawPal" });
+pal.innerHTML = TOOLS.map(([k, n, , svg]) => `<button data-k="${k}" title="${n}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join("");
+wrapEl.appendChild(pal);
+const drawBtn = Object.assign(document.createElement("button"), { id:"drawBtn", textContent:"✏️ 그리기", title:"선, 도형, 피보나치 그리기" });
+const alertBtn = Object.assign(document.createElement("button"), { id:"alertBtn", textContent:"🔔 알림", title:"차트를 눌러 그 가격에 알림 걸기. 실시간 가격이 닿으면 바탕화면 알림" });
+bar.insertBefore(drawBtn, info); bar.insertBefore(alertBtn, info);
+const D = { mk:null, list:[], tool:null, draft:null, sel:null, drag:null, hover:null };
+const keyOf = m => "mjDraw:" + m;
+function loadList() { D.mk = market; D.sel = null; D.draft = null; try { D.list = JSON.parse(localStorage.getItem(keyOf(market))) || []; } catch (e) { D.list = []; } }
+function saveList() { try { if (D.list.length) localStorage.setItem(keyOf(D.mk), JSON.stringify(D.list)); else localStorage.removeItem(keyOf(D.mk)); } catch (e) {} }
+let ALERTS = {}; try { ALERTS = JSON.parse(localStorage.getItem("mjAlerts")) || {}; } catch (e) {}
+const saveAlerts = () => { try { localStorage.setItem("mjAlerts", JSON.stringify(ALERTS)); } catch (e) {} };
+function setTool(k) {
+  D.tool = D.tool === k ? null : k; D.draft = null;
+  pal.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === D.tool));
+  alertBtn.classList.toggle("on", D.tool === "alert");
+  wrapEl.classList.toggle("drawing", !!D.tool);
+  redraw();
+}
+drawBtn.onclick = () => { const on = !pal.classList.contains("show"); pal.classList.toggle("show", on); drawBtn.classList.toggle("on", on); if (!on && D.tool && D.tool !== "alert") setTool(null); };
+alertBtn.onclick = () => setTool("alert");
+pal.onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const k = b.dataset.k;
+  if (k === "undo") { D.list.pop(); D.sel = null; saveList(); redraw(); return; }
+  if (k === "clear") { if (!D.list.length) return; askConfirm("그림 모두 지우기", `${market} 에 그린 ${D.list.length}개를 모두 지울까요?`, "지우기").then(ok => { if (ok) { D.list = []; D.sel = null; saveList(); redraw(); } }); return; }
+  setTool(k);
+};
+// ----- 좌표 바꾸기: 봉 시간 ↔ 화면 x (봉 사이와 데이터 밖은 봉 간격으로 늘려 계산) -----
+const ts = chart.timeScale();
+function stepSec() { const n = candles.length; return n > 1 ? candles[n - 1].time - candles[n - 2].time : 60; }
+function t2l(t) {
+  const n = candles.length; if (!n) return null;
+  if (t <= candles[0].time) return (t - candles[0].time) / stepSec();
+  if (t >= candles[n - 1].time) return n - 1 + (t - candles[n - 1].time) / stepSec();
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (candles[m].time <= t) lo = m; else hi = m; }
+  return lo + (t - candles[lo].time) / (candles[hi].time - candles[lo].time);
+}
+function l2t(l) {
+  const n = candles.length; if (!n) return null;
+  if (l <= 0) return candles[0].time + l * stepSec();
+  if (l >= n - 1) return candles[n - 1].time + (l - (n - 1)) * stepSec();
+  const i = Math.floor(l); return candles[i].time + (l - i) * (candles[i + 1].time - candles[i].time);
+}
+const xOf = t => { const l = t2l(t); return l == null ? null : ts.logicalToCoordinate(l); };
+const yOf = p => cs.priceToCoordinate(p);
+const ptOf = q => ({ x:xOf(q.t), y:yOf(q.p) });
+function evPt(e) {
+  const r = box.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const l = ts.coordinateToLogical(x), p = cs.coordinateToPrice(y);
+  return l == null || p == null ? null : { t:l2t(l), p, x, y };
+}
+// ----- 그리기 -----
+const plotW = () => box.clientWidth - chart.priceScale("right").width();
+// 가격 칸 아래 끝 (그 밑은 거래량, RSI, 스토캐스틱 칸이라 그림이 넘어가지 않게 자름)
+const plotH = () => { const m = cs.priceScale().options().scaleMargins || { bottom:0 }; return Math.round(box.clientHeight * (1 - m.bottom)) + 6; };
+const colr = () => excel ? "#1f5fbf" : "#fbbf24";
+function lineTo(a, b, extL, extR) {   // 두 점을 지나는 선을 화면 끝까지 늘림
+  const W = plotW(); let p = { ...a }, q = { ...b };
+  const dx = b.x - a.x, dy = b.y - a.y;
+  if (Math.abs(dx) < 1e-6) return [p, q];
+  if (extR) { const k = ((dx > 0 ? W : 0) - a.x) / dx; q = { x:a.x + dx * k, y:a.y + dy * k }; }
+  if (extL) { const k = ((dx > 0 ? 0 : W) - a.x) / dx; p = { x:a.x + dx * k, y:a.y + dy * k }; }
+  return [p, q];
+}
+const fmtP = p => (p < 0 ? "-" : "") + fmtIn(market, Math.abs(p));   // 음수도 양수와 같은 자릿수로
+function label(x, y, s, c, align) {
+  dg.font = "11px Pretendard, sans-serif"; const w = dg.measureText(s).width + 8;
+  const lx = align === "r" ? x - w : x;
+  dg.fillStyle = excel ? "rgba(255,255,255,.9)" : "rgba(14,17,23,.85)"; dg.fillRect(lx, y - 8, w, 16);
+  dg.fillStyle = c; dg.textBaseline = "middle"; dg.fillText(s, lx + 4, y);
+}
+function shape(d, P) {   // 그림 하나 그리기. 맞추기(클릭) 판정에 쓸 선분 목록과 채운 영역을 돌려줌
+  const c = d.c || colr(), segs = [], W = plotW();
+  let fill = null;
+  dg.strokeStyle = c; dg.lineWidth = 1.6; dg.setLineDash([]);
+  const L = (a, b) => { dg.beginPath(); dg.moveTo(a.x, a.y); dg.lineTo(b.x, b.y); dg.stroke(); segs.push([a, b]); };
+  const [a, b, e] = P;
+  switch (d.k) {
+    case "seg": L(a, b); break;
+    case "ray": { const [p, q] = lineTo(a, b, false, true); L(p, q); break; }
+    case "ext": { const [p, q] = lineTo(a, b, true, true); L(p, q); break; }
+    case "hline": L({ x:0, y:a.y }, { x:W, y:a.y }); label(W, a.y, fmtP(d.p[0].p), c, "r"); break;
+    case "alert": {
+      dg.setLineDash([6, 4]); dg.strokeStyle = d.fired ? "#9ca3af" : "#ef4444";
+      dg.beginPath(); dg.moveTo(0, a.y); dg.lineTo(W, a.y); dg.stroke(); segs.push([{ x:0, y:a.y }, { x:W, y:a.y }]); dg.setLineDash([]);
+      label(W, a.y, (d.fired ? "알림 끝 " : "🔔 ") + fmtP(d.p[0].p), d.fired ? "#9ca3af" : "#ef4444", "r"); break;
+    }
+    case "chan": {
+      L(a, b);
+      if (e) {
+        const off = e.y - (a.y + (b.y - a.y) * ((e.x - a.x) / ((b.x - a.x) || 1)));
+        const a2 = { x:a.x, y:a.y + off }, b2 = { x:b.x, y:b.y + off }; L(a2, b2);
+        dg.setLineDash([4, 4]); L({ x:a.x, y:a.y + off / 2 }, { x:b.x, y:b.y + off / 2 }); dg.setLineDash([]);
+        dg.fillStyle = c + "22"; dg.beginPath(); dg.moveTo(a.x, a.y); dg.lineTo(b.x, b.y); dg.lineTo(b2.x, b2.y); dg.lineTo(a2.x, a2.y); dg.closePath(); dg.fill();
+        fill = [a, b, b2, a2];
+      }
+      break;
+    }
+    case "fib": {
+      const p1 = d.p[0].p, p2 = (d.p[1] || d.p[0]).p, x0 = Math.min(a.x, b.x);
+      FIB.forEach((f, i) => {
+        const pr = p2 + (p1 - p2) * f, y = yOf(pr); if (y == null) return;
+        dg.strokeStyle = FIBC[i]; dg.lineWidth = 1.2; dg.beginPath(); dg.moveTo(x0, y); dg.lineTo(W, y); dg.stroke(); segs.push([{ x:x0, y }, { x:W, y }]);
+        label(x0, y - 9, `${f} (${fmtP(pr)})`, FIBC[i]);
+      });
+      dg.setLineDash([3, 3]); dg.strokeStyle = c; dg.beginPath(); dg.moveTo(a.x, a.y); dg.lineTo(b.x, b.y); dg.stroke(); dg.setLineDash([]); segs.push([a, b]);
+      break;
+    }
+    case "range": {
+      const p1 = d.p[0].p, p2 = (d.p[1] || d.p[0]).p, up = p2 >= p1, cc = up ? "#ef4f4f" : "#3b82f6";
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y);
+      dg.fillStyle = cc + "2a"; dg.fillRect(x, y, w, h); dg.strokeStyle = cc; dg.strokeRect(x, y, w, h);
+      dg.beginPath(); dg.moveTo(a.x + (b.x - a.x) / 2, a.y); dg.lineTo(a.x + (b.x - a.x) / 2, b.y); dg.stroke();
+      const bars = Math.round(Math.abs(t2l(d.p[(d.p[1] ? 1 : 0)].t) - t2l(d.p[0].t)));
+      const diff = p2 - p1, pc = p1 ? diff / p1 * 100 : 0;
+      label(x + w / 2 - 70, (up ? y - 12 : y + h + 12), `${diff >= 0 ? "+" : ""}${fmtP(diff)} (${pc >= 0 ? "+" : ""}${pc.toFixed(2)}%) · ${bars}봉`, cc);
+      fill = [{ x, y }, { x:x + w, y }, { x:x + w, y:y + h }, { x, y:y + h }];
+      break;
+    }
+    case "tri": { const pts = e ? [a, b, e] : [a, b]; for (let i = 0; i < pts.length; i++) L(pts[i], pts[(i + 1) % pts.length]); if (e) { dg.fillStyle = c + "1f"; dg.beginPath(); dg.moveTo(a.x, a.y); dg.lineTo(b.x, b.y); dg.lineTo(e.x, e.y); dg.closePath(); dg.fill(); fill = [a, b, e]; } break; }
+    case "rect": {
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y);
+      dg.fillStyle = c + "1f"; dg.fillRect(x, y, w, h); dg.strokeRect(x, y, w, h);
+      fill = [{ x, y }, { x:x + w, y }, { x:x + w, y:y + h }, { x, y:y + h }]; fill.forEach((p, i) => segs.push([p, fill[(i + 1) % 4]]));
+      break;
+    }
+    case "circ": {
+      const r = Math.hypot(b.x - a.x, b.y - a.y);
+      dg.fillStyle = c + "1f"; dg.beginPath(); dg.arc(a.x, a.y, r, 0, Math.PI * 2); dg.fill(); dg.stroke();
+      d._circ = { x:a.x, y:a.y, r }; break;
+    }
+    case "text": {
+      dg.font = "bold 13px Pretendard, sans-serif"; dg.fillStyle = c; dg.textBaseline = "middle";
+      const s = d.txt || ""; dg.fillText(s, a.x, a.y); const w = dg.measureText(s).width;
+      fill = [{ x:a.x - 3, y:a.y - 10 }, { x:a.x + w + 3, y:a.y - 10 }, { x:a.x + w + 3, y:a.y + 10 }, { x:a.x - 3, y:a.y + 10 }];
+      break;
+    }
+    case "fibt": {
+      const l0 = t2l(d.p[0].t), l1 = t2l((d.p[1] || d.p[0]).t), u = l1 - l0, H = plotH();
+      FIBT.forEach((f, i) => {
+        const x = ts.logicalToCoordinate(l0 + u * f); if (x == null || (u === 0 && i)) return;
+        dg.strokeStyle = FIBC[i % FIBC.length]; dg.lineWidth = 1.2; dg.beginPath(); dg.moveTo(x, 0); dg.lineTo(x, H); dg.stroke(); segs.push([{ x, y:0 }, { x, y:H }]);
+        label(x + 2, 14, String(f), FIBC[i % FIBC.length]);
+      });
+      break;
+    }
+  }
+  return { segs, fill };
+}
+function redraw() {
+  if (D.mk !== market) loadList();
+  const w = box.clientWidth, h = box.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (dc.width !== w * dpr || dc.height !== h * dpr) { dc.width = w * dpr; dc.height = h * dpr; dc.style.width = w + "px"; dc.style.height = h + "px"; }
+  dg.setTransform(dpr, 0, 0, dpr, 0, 0); dg.clearRect(0, 0, w, h);
+  if (!candles.length) return;
+  dg.save(); dg.beginPath(); dg.rect(0, 0, plotW(), plotH()); dg.clip();
+  const items = D.list.concat((ALERTS[market] || []).map((a, i) => ({ k:"alert", p:[{ t:0, p:a.price }], fired:a.fired, ai:i })));
+  if (D.draft) items.push(D.draft);
+  for (const d of items) {
+    const P = d.p.map(q => d.k === "hline" || d.k === "alert" ? { x:0, y:yOf(q.p) } : ptOf(q));
+    if (P.some(q => q.x == null || q.y == null)) continue;
+    d._hit = shape(d, P); d._P = P;
+    if (d === D.sel || d === D.draft) {
+      dg.fillStyle = excel ? "#fff" : "#0e1117"; dg.strokeStyle = d.c || colr(); dg.lineWidth = 1.5;
+      (d.k === "hline" || d.k === "alert" ? [] : d.k === "text" ? [] : P).forEach(q => { dg.beginPath(); dg.arc(q.x, q.y, 4.5, 0, Math.PI * 2); dg.fill(); dg.stroke(); });
+    }
+  }
+  dg.restore();
+}
+// ----- 맞추기(클릭 판정) -----
+function distSeg(p, a, b) { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy; let t = L2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy); }
+function inPoly(p, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) c = !c; } return c; }
+function hitTest(m) {   // 위에 그린 것부터. 손잡이(점)면 그 번호도 돌려줌
+  const alerts = (ALERTS[market] || []).map((a, i) => ({ k:"alert", p:[{ t:0, p:a.price }], ai:i, _P:[{ x:0, y:yOf(a.price) }] }));
+  const all = D.list.concat(alerts);
+  for (let i = all.length - 1; i >= 0; i--) {
+    const d = all[i];
+    if (d.ai == null && !d._hit) continue;
+    if (d.k === "alert") { if (Math.abs(m.y - d._P[0].y) < 6) return { d, h:-1 }; continue; }
+    if (d === D.sel && d._P) { const h = d._P.findIndex(q => Math.hypot(q.x - m.x, q.y - m.y) < 7); if (h >= 0) return { d, h }; }
+    if (d._hit.segs.some(([a, b]) => distSeg(m, a, b) < 6)) return { d, h:-1 };
+    if (d._hit.fill && inPoly(m, d._hit.fill)) return { d, h:-1 };
+    if (d._circ && Math.hypot(m.x - d._circ.x, m.y - d._circ.y) <= d._circ.r + 5) return { d, h:-1 };
+  }
+  return null;
+}
+// ----- 마우스 -----
+let textBox = null;
+function askText(m, done) {   // 글자 도구: 그 자리에 입력 칸 (alert/prompt 창은 쓰지 않음)
+  if (textBox) textBox.remove();
+  textBox = Object.assign(document.createElement("input"), { className:"drawTxt", placeholder:"글자 입력 후 Enter" });
+  textBox.style.left = m.x + "px"; textBox.style.top = (m.y - 12) + "px";
+  wrapEl.appendChild(textBox); textBox.focus();
+  const fin = ok => { const v = textBox.value.trim(); textBox.remove(); textBox = null; if (ok && v) done(v); };
+  textBox.onkeydown = e => { e.stopPropagation(); if (e.key === "Enter") fin(true); if (e.key === "Escape") fin(false); };
+  textBox.onblur = () => textBox && fin(true);
+}
+// 알림 가격 다듬기: 원화 코인은 업비트 호가 단위, 테더는 소수 둘째 자리, 주식은 원 단위
+const roundP = p => market.startsWith("KRW-") ? snapPrice(p) : market.startsWith("USDT-") ? Math.round(p * 100) / 100 : Math.round(p);
+function addAlert(price) {
+  price = roundP(price);
+  const cur = PRICES[market];
+  const arr = ALERTS[market] = (ALERTS[market] || []).filter(a => !a.fired);
+  arr.push({ price, dir: cur != null && price < cur ? "down" : "up" });
+  saveAlerts();
+}
+function finish(d) {
+  D.draft = null;
+  if (d.k === "alert") addAlert(d.p[0].p);
+  else { d.c = colr(); D.list.push(d); D.sel = d; saveList(); }
+  setTool(null);
+}
+const block = e => { e.stopPropagation(); e.preventDefault(); };
+wrapEl.addEventListener("mousedown", e => {
+  if (e.button !== 0 || e.target.closest("#drawPal") || e.target.classList.contains("drawTxt")) return;
+  const m = evPt(e); if (!m) return;
+  if (m.x > plotW() || m.y > plotH()) return;   // 오른쪽 가격 눈금과 아래 보조지표 칸은 차트가 쓰게 둠
+  if (D.tool) {
+    block(e);
+    const q = { t:m.t, p:m.p };
+    if (D.tool === "text") { askText(m, v => finish({ k:"text", p:[q], txt:v })); return; }
+    const need = NEED[D.tool] || 1;   // 알림, 수평선은 한 번, 선과 도형은 두 번, 채널과 삼각형은 세 번 클릭
+    if (need === 1) { finish({ k:D.tool, p:[q] }); return; }
+    if (!D.draft) D.draft = { k:D.tool, p:[q, { ...q }] };   // 마지막 점은 마우스를 따라감
+    else {
+      D.draft.p[D.draft.p.length - 1] = q;
+      if (D.draft.p.length >= need) { finish(D.draft); return; }
+      D.draft.p.push({ ...q });
+    }
+    redraw(); return;
+  }
+  const hit = hitTest(m);
+  if (!hit) { if (D.sel) { D.sel = null; redraw(); } return; }
+  block(e);
+  if (hit.d.k === "alert") { D.sel = hit.d; D.drag = { d:hit.d, h:-1, m0:m, alert:true }; redraw(); return; }
+  D.sel = hit.d;
+  D.drag = { d:hit.d, h:hit.h, m0:m, p0:hit.d.p.map(q => ({ ...q })) };
+  redraw();
+}, true);
+window.addEventListener("mousemove", e => {
+  if (D.draft) { const m = evPt(e); if (m) { D.draft.p[D.draft.p.length - 1] = { t:m.t, p:m.p }; redraw(); } return; }
+  if (!D.drag) {
+    if (!D.tool) { const r = box.getBoundingClientRect(), m = { x:e.clientX - r.left, y:e.clientY - r.top };
+      const over = m.x >= 0 && m.y >= 0 && m.x < plotW() && m.y < plotH() && hitTest(m);
+      wrapEl.classList.toggle("drawHover", !!over); }
+    return;
+  }
+  const m = evPt(e); if (!m) return;
+  const g0 = D.drag;
+  if (g0.alert) {
+    const a = (ALERTS[market] || [])[g0.d.ai]; if (a) { a.price = roundP(m.p); a.fired = false; const cur = PRICES[market]; a.dir = cur != null && a.price < cur ? "down" : "up"; }
+    redraw(); return;
+  }
+  const dl = t2l(m.t) - t2l(g0.m0.t), dp = m.p - g0.m0.p;
+  if (g0.h >= 0) g0.d.p[g0.h] = { t:m.t, p:m.p };
+  else g0.d.p = g0.p0.map(q => ({ t:l2t(t2l(q.t) + dl), p:q.p + dp }));
+  redraw();
+}, true);
+window.addEventListener("mouseup", () => { if (D.drag) { if (D.drag.alert) saveAlerts(); else saveList(); D.drag = null; } }, true);
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input, textarea")) return;
+  if (e.key === "Escape" && (D.tool || D.draft)) { setTool(null); return; }
+  if ((e.key === "Delete" || e.key === "Backspace") && D.sel) {
+    if (D.sel.k === "alert") { (ALERTS[market] || []).splice(D.sel.ai, 1); saveAlerts(); }
+    else { D.list = D.list.filter(d => d !== D.sel); saveList(); }
+    D.sel = null; redraw(); e.preventDefault();
+  }
+});
+// ----- 가격 알림: 실시간 가격이 선을 넘으면 알림 (모든 종목) -----
+const _setCardA = setCard;
+setCard = function (code, price, rate, change) {
+  _setCardA(code, price, rate, change);
+  const arr = ALERTS[code]; if (!arr || !arr.length) return;
+  const p = Number(price); let hit = false;
+  for (const a of arr) {
+    if (a.fired) continue;
+    if ((a.dir === "up" && p >= a.price) || (a.dir === "down" && p <= a.price)) {
+      a.fired = true; hit = true;
+      const name = (COINS.find(c => c[0] === code) || [code, code])[1];
+      notify(`MJ코인 가격 알림: ${name}`, `${fmtIn(code, a.price)} ${a.dir === "up" ? "이상" : "이하"} 도달 (지금 ${fmtIn(code, p)})`);
+    }
+  }
+  if (hit) { saveAlerts(); if (code === market) redraw(); }
+};
+ts.subscribeVisibleLogicalRangeChange(redraw);
+chart.subscribeCrosshairMove(() => { if (!D.draft && !D.drag) redraw(); });
+setInterval(redraw, 250);   // 가격 눈금을 위아래로 끌 때는 알림이 없어서 주기적으로 다시 그림
+loadList(); redraw();
 }
 
 refreshTabs(); layout(); load(); stockLoop(); sendSubscribe(); fitXl();
