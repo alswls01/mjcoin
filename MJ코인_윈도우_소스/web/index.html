@@ -2480,7 +2480,7 @@ async function acctState(force) {   // 구독 계정(Claude Code) 로그인 상�
   if (!setupBusy) $(".altx").textContent = t;
   $(".alogin").hidden = acct.loggedIn;
   $(".atok").hidden = acct.loggedIn && acct.method !== "token"; $(".atdel").hidden = acct.method !== "token";
-  $(".amk").hidden = !(acct.loggedIn && acct.method !== "token");   // 내 계정으로 로그인된 컴퓨터에서만 코드 만들기
+  $(".amk").hidden = navigator.userAgent.includes("Windows") || !(acct.loggedIn && acct.method !== "token");   // 맥(계정 주인)에서만, 내 계정으로 로그인됐을 때만 코드 만들기
   $(".aown").hidden = acct.loggedIn;
   return acct.loggedIn || acct.hasKey;
 }

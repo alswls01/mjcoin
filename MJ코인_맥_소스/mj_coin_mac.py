@@ -512,6 +512,8 @@ def ai_op(t):
     if op == "setup":
         return ai_cli_setup()
     if op == "mktoken":
+        if sys.platform == "win32":
+            return 0, {"error": "연결 코드는 계정 주인의 맥에서만 만듭니다"}
         return 200, ai_cli_mktoken()
     if op == "settoken":
         k = str(t.get("token") or "").strip()
