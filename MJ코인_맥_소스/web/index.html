@@ -291,7 +291,7 @@
   #ecal .cfoot { font-size:11px; color:var(--dim); padding:6px 14px; border-top:1px solid var(--line); flex:none; }
   body.excel #ecal .cbx { --panel:#fff; --text:#222; --dim:#666; --line:#e1e1e1; --bg:#fff; --accent:#217346; --up:#c00000; --down:#0050c8; border-radius:2px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
 
-  /* ---------- 차트 아래 시장 지표 두 줄 + 오른쪽 날씨 ---------- */
+  /* ---------- 차트 아래 시장 지표 두 줄, 오른쪽 환율과 금 ---------- */
   #ind { order:5; flex:none; display:flex; gap:6px; padding:8px 12px 10px; }
   #ind .irows { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
   #ind .irow { display:flex; gap:6px; }
@@ -305,15 +305,11 @@
   #ind .gbar.fg { background:linear-gradient(to right, #3b82f6, #22c55e 50%, #ef4f4f); overflow:visible; }
   #ind .gbar.fg i { position:absolute; top:-3px; width:3px; height:10px; border-radius:2px; background:var(--text); transform:translateX(-1px); }
   #ind .gbar .l { background:var(--up); } #ind .gbar .s { background:var(--down); }
-  #ind .iwx { flex:none; width:230px; display:flex; flex-direction:column; }
-  #ind .iwx .wnow { display:flex; align-items:center; gap:8px; }
-  #ind .iwx .wico { font-size:26px; line-height:1; }
-  #ind .iwx .wtmp { font-size:22px; font-weight:700; }
-  #ind .iwx .wtx { font-size:11.5px; color:var(--dim); line-height:1.35; min-width:0; }
-  #ind .iwx .whr { display:flex; gap:2px; margin-top:auto; overflow-x:auto; scrollbar-width:none; }
-  #ind .iwx .whr::-webkit-scrollbar { display:none; }
-  #ind .iwx .wh { flex:none; width:31px; text-align:center; font-size:10.5px; color:var(--dim); line-height:1.3; }
-  #ind .iwx .wh b { display:block; color:var(--text); font-weight:600; font-size:11px; }
+  #ind .ifx { flex:none; width:230px; display:flex; flex-direction:column; justify-content:space-between; }
+  #ind .ifx .fr { display:flex; align-items:baseline; gap:6px; white-space:nowrap; font-size:12px; }
+  #ind .ifx .fn { color:var(--dim); width:62px; flex:none; font-size:11.5px; }
+  #ind .ifx .fv { font-weight:700; font-size:13px; flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; }
+  #ind .ifx .fc { font-size:11px; font-weight:600; width:50px; text-align:right; flex:none; }
   /* 엑셀 테마: 시트 칸(#cells) 안 아래쪽에 둠. 창 맨 아래에 붙이면 시트 탭과 상태 표시줄을 가림 */
   body.excel #ind { position:absolute; left:6px; right:14px; bottom:6px; height:108px; padding:0; gap:0; background:#fff; border:1px solid #bfbfbf;
     --panel:#fff; --text:#222; --dim:#666; --line:#d4d4d4; --up:#c00000; --down:#0050c8; }
@@ -321,8 +317,8 @@
   body.excel #ind .irow + .irow { border-top:1px solid #d4d4d4; }
   body.excel #ind .ic { border:none; border-right:1px solid #d4d4d4; border-radius:0; padding:2px 6px; }
   body.excel #ind .irow .ic:last-child { border-right:1px solid #d4d4d4; }
-  body.excel #ind .iwx { border-right:none; }
-  body.excel #ind .iv { font-size:13px; } body.excel #ind .iwx .wtmp { font-size:18px; } body.excel #ind .iwx .wico { font-size:22px; }
+  body.excel #ind .ifx { border-right:none; }
+  body.excel #ind .iv { font-size:13px; } body.excel #ind .ifx .fv { font-size:12px; }
   body.excel #ind .gbar { margin-top:2px; }
   body.excel #wrap { bottom:120px; }
   body.excel.blank #ind { visibility:hidden; }
@@ -341,10 +337,67 @@
   #drawPal svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   #drawPal svg .f { fill:currentColor; stroke:none; } #drawPal svg .thin { stroke-width:1.6; }
   #drawPal svg .box { fill:currentColor; fill-opacity:.35; stroke:none; } #drawPal svg .tx { fill:currentColor; stroke:none; font-weight:700; font-family:sans-serif; }
+  #alertPop { display:none; position:fixed; z-index:50; width:270px; padding:12px; background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); font-size:12px; }
+  #alertPop.show { display:block; }
+  #alertPop .ttl { font-weight:700; font-size:13px; margin-bottom:2px; }
+  #alertPop .cur { color:var(--dim); margin-bottom:8px; }
+  #alertPop .row { display:flex; gap:6px; align-items:center; }
+  #alertPop input { flex:1; min-width:0; background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; font-size:14px; text-align:right; }
+  #alertPop button { background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 9px; font:inherit; cursor:pointer; white-space:nowrap; }
+  #alertPop button.dn { color:#3b82f6; border-color:#3b82f6; } #alertPop button.up { color:#ef4f4f; border-color:#ef4f4f; }
+  #alertPop button.add { width:100%; margin-top:8px; background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  #alertPop .pct { text-align:right; color:var(--dim); margin-top:4px; min-height:15px; }
+  #alertPop .list { margin-top:10px; border-top:1px solid var(--line); padding-top:6px; max-height:180px; overflow:auto; }
+  #alertPop .it { display:flex; align-items:center; gap:6px; padding:4px 0; }
+  #alertPop .it span { flex:1; } #alertPop .it .done { color:var(--dim); text-decoration:line-through; }
+  #alertPop .it button { padding:1px 7px; font-size:11px; }
+  #alertPop .none { color:var(--dim); padding:4px 0; }
+  body.excel #alertPop { --panel:#fff; --text:#222; --line:#d5d5d5; --accent:#217346; --dim:#666; border-radius:2px; }
+  /* 이동평균 단추 줄: 표시 단추 줄 바로 아래 */
+  #maBar { order:3; display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; padding:0 12px 8px; font-size:12px; }
+  #maBar .mh { color:var(--dim); }
+  #maBar button { background:var(--panel); color:var(--dim); border:1px solid var(--line); border-radius:7px; padding:3px 9px; cursor:pointer; font:inherit; display:inline-flex; align-items:center; gap:5px; }
+  #maBar button i { width:12px; height:3px; border-radius:2px; opacity:.35; }
+  #maBar button.on { color:var(--text); border-color:var(--accent); } #maBar button.on i { opacity:1; }
+  body.excel #maBar { display:grid; grid-template-rows:repeat(3, 21px); grid-auto-flow:column; gap:1px 2px; padding:2px 0 0; }
+  body.excel #maBar .mh { display:none; }
+  body.excel #maBar button { background:transparent; color:#777; border:1px solid transparent; border-radius:0; padding:0 6px; font-size:12px; }
+  body.excel #maBar button.on { color:#262626; background:#c5ddcf; border-color:#a9c9b6; }
+  body.excel #maBar button:hover { background:#d2e8db; }
+  /* 걸어 둔 가격 알림 목록: 표시 단추 줄 바로 아래. 넘치면 이 칸만 스크롤 */
+  #alertList { order:3; display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; margin:0 12px 8px; max-height:52px; overflow-y:auto; font-size:12px; font-variant-numeric:tabular-nums; }
+  #alertList .ah { color:var(--dim); flex:none; }
+  #alertList .al { display:inline-flex; align-items:center; gap:5px; padding:1px 3px 1px 8px; border:1px solid var(--line); border-radius:12px; background:var(--panel); white-space:nowrap; cursor:pointer; }
+  #alertList .al:hover { border-color:var(--accent); }
+  #alertList .al.done { color:var(--dim); text-decoration:line-through; }
+  #alertList .al .u { color:var(--up); } #alertList .al .d { color:var(--down); }
+  #alertList .al button { background:transparent; border:none; color:var(--dim); cursor:pointer; font-size:13px; line-height:1; padding:0 4px; }
+  #alertList .al button:hover { color:#ef4f4f; }
+  body.excel .grp { flex:none; } body.excel #g-alert { flex:0 1 240px; min-width:110px; }   /* 다른 리본 칸은 그대로, 알림 칸만 남는 자리에 맞춰 줄어듦 */
+  @media (max-width:1300px) { body.excel #g-clip { display:none !important; } }   /* 창이 좁으면 장식용 칸부터 숨겨 알림 칸 자리를 만듦 */
+  @media (max-width:1300px) { body.excel #g-font { display:none !important; } }
+  body.excel #alertList { flex-direction:column; flex-wrap:nowrap; align-items:stretch; gap:0; width:100%; min-width:0; height:64px; max-height:none; margin:2px 0 0; font-size:11.5px; background:#fff; border:1px solid #c6c6c6; color:#262626; }
+  body.excel #alertList .ah { padding:1px 6px; }
+  body.excel #alertList .al > span { overflow:hidden; text-overflow:ellipsis; }
+  body.excel #alertList .al { border:none; border-bottom:1px solid #e3e3e3; border-radius:0; background:transparent; padding:0 2px 0 6px; justify-content:space-between; }
+  body.excel #alertList .al:hover { background:#d2e8db; }
+  body.excel #alertList .al .u { color:#c00000; } body.excel #alertList .al .d { color:#1f5fbf; }
+  #drawSel { display:none; position:absolute; z-index:7; gap:4px; padding:3px; background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  #drawSel.show { display:flex; }
+  #drawSel button { background:transparent; border:1px solid var(--line); border-radius:6px; color:var(--text); font:inherit; font-size:12px; padding:3px 9px; cursor:pointer; white-space:nowrap; }
+  #drawSel button.del { color:#ef4f4f; border-color:#ef4f4f; } #drawSel button.del:hover { background:#ef4f4f; color:#fff; }
+  body.excel #drawSel { --panel:#fff; --text:#222; --line:#d5d5d5; border-radius:2px; }
   .drawTxt { position:absolute; z-index:7; width:180px; padding:3px 6px; font:13px Pretendard, sans-serif; border:1px solid var(--accent); border-radius:5px;
     background:var(--panel); color:var(--text); outline:none; }
   body.excel #drawPal { --panel:#fff; --text:#222; --line:#d5d5d5; --accent:#217346; border-radius:2px; box-shadow:0 4px 14px rgba(0,0,0,.2); }
   body.excel .drawTxt { --panel:#fff; --text:#222; --accent:#217346; border-radius:0; }
+
+  /* ---------- 버전, 업데이트 ---------- */
+  #verTag { color:var(--dim); font-size:11px; margin-left:8px; }
+  #updBtn { display:none; } #updBtn.show { display:inline-block; }
+  #bar #updBtn { border-color:#22c55e; color:#22c55e; font-weight:700; }
+  #bar #updBtn:disabled { opacity:.7; cursor:default; }
+  body.excel #bar #updBtn { color:#217346; border-color:#217346; }
 </style>
 </head>
 <body>
@@ -358,12 +411,14 @@
 </div>
 <div id="xl-tabs" class="xl-only"><span>파일</span><span class="on">홈</span><span>삽입</span><span>페이지 레이아웃</span><span>수식</span><span>데이터</span><span>검토</span><span id="tab-view" title="">보기</span><span>도움말</span></div>
 <div id="ribbon">
-  <div class="grp xl-only"><div class="paste"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="23" rx="2" fill="#e8d6b3" stroke="#8a6d3b"/><rect x="11" y="3" width="10" height="5" rx="1" fill="#fff" stroke="#666"/><rect x="14" y="12" width="14" height="17" fill="#fff" stroke="#777"/></svg>붙여넣기</div>
+  <div class="grp xl-only" id="g-clip"><div class="paste"><svg viewBox="0 0 32 32"><rect x="7" y="5" width="18" height="23" rx="2" fill="#e8d6b3" stroke="#8a6d3b"/><rect x="11" y="3" width="10" height="5" rx="1" fill="#fff" stroke="#666"/><rect x="14" y="12" width="14" height="17" fill="#fff" stroke="#777"/></svg>붙여넣기</div>
     <div class="smalls"><span>✂ 잘라내기</span><span>⧉ 복사</span><span>🖌 서식 복사</span></div><div class="cap">클립보드</div></div>
-  <div class="grp xl-only"><div class="font"><span class="fbox">맑은 고딕</span><span class="fbox sz">11</span></div>
+  <div class="grp xl-only" id="g-font"><div class="font"><span class="fbox">맑은 고딕</span><span class="fbox sz">11</span></div>
     <div class="font"><b class="fb">가</b><i class="fb">가</i><u class="fb">가</u><span class="fb">⊞</span><span class="fb"><u style="text-decoration-color:#ffd400;text-decoration-thickness:3px">가</u></span></div><div class="cap">글꼴</div></div>
   <div class="grp" id="g-tf"><div id="bar"></div><div class="cap xl-only">간격</div></div>
   <div class="grp" id="g-show"><div id="bar2"></div><div class="cap xl-only">표시</div></div>
+  <div class="grp" id="g-ma"><div id="maBar"></div><div class="cap xl-only">이동평균</div></div>
+  <div class="grp" id="g-alert"><div id="alertList"></div><div class="cap xl-only">가격 알림</div></div>
   <div class="grp xl-only" id="g-theme"><div id="bar3"></div><div class="cap">테마</div></div>
 </div>
 <div id="xl-formula" class="xl-only"><div id="namebox">A1</div><div class="fxbtn">⋮ &nbsp;✕ &nbsp;✓ &nbsp;<i>fx</i></div><div id="fx"></div></div>
@@ -498,7 +553,17 @@ for (const [k, label] of TFS) {
   b.onclick = () => { tf = k; refreshTabs(); load(); };
   bar.appendChild(b);
 }
+// 이동평균선 종류와 색, 켜짐 여부 (선 자체는 차트를 만든 뒤 maS)
+const MAS = [[5,"#ec4899"],[10,"#f97316"],[20,"#eab308"],[90,"#22c55e"],[120,"#06b6d4"],[200,"#a855f7"],[500,"#94a3b8"]];
+let maOn = {}; try { maOn = JSON.parse(localStorage.getItem("mjMA")) || {}; } catch (e) {}
+MAS.forEach(([n]) => { if (maOn[n] == null) maOn[n] = true; });
 const bar2 = document.getElementById("bar2");
+const maBar = document.getElementById("maBar");
+maBar.innerHTML = `<span class="mh">이동평균</span>` + MAS.map(([n, c]) => `<button data-n="${n}" title="${n}봉 종가 평균선 켜고 끄기"><i style="background:${c}"></i>${n}</button>`).join("");
+const maRefresh = () => maBar.querySelectorAll("button").forEach(b => b.classList.toggle("on", !!maOn[b.dataset.n]));
+maBar.onclick = e => { const b = e.target.closest("button"); if (!b) return; const n = b.dataset.n; maOn[n] = !maOn[n];
+  maS[MAS.findIndex(x => String(x[0]) === n)].applyOptions({ visible:maOn[n] }); maRefresh(); try { localStorage.setItem("mjMA", JSON.stringify(maOn)); } catch (e) {} };
+maRefresh();
 const bTrend = Object.assign(document.createElement("button"), {textContent:"추세선"});
 bTrend.onclick = () => { showTrend = !showTrend; refreshTabs(); drawTrend(); };
 const bVP = Object.assign(document.createElement("button"), {textContent:"매물대"});
@@ -569,6 +634,38 @@ const bbOpt = { lineWidth:1, lastValueVisible:false, priceLineVisible:false, cro
 const bbUp = chart.addLineSeries({ ...bbOpt, color:"rgba(45,212,191,.85)" });
 const bbMid = chart.addLineSeries({ ...bbOpt, color:"rgba(250,204,21,.8)", lineStyle:2 });
 const bbLo = chart.addLineSeries({ ...bbOpt, color:"rgba(45,212,191,.85)" });
+// 이동평균선 5·10·20·90·120·200·500 (종가 단순평균). 긴 선은 화면 봉 200개보다 앞의 봉이 필요해서 maHist 에 따로 받아 둠
+// (화면 봉, 매물대, 추세선, 다이버전스는 그대로 200개 기준)
+let maHist = [];
+const maS = MAS.map(([n, c]) => chart.addLineSeries({ color:c, lineWidth:1, lastValueVisible:false, priceLineVisible:false, crosshairMarkerVisible:false, visible:!!maOn[n] }));
+function updateMA() {
+  const t0 = candles.length ? candles[0].time : 0;
+  const all = maHist.filter(c => c.time < t0).concat(candles), off = all.length - candles.length;
+  MAS.forEach(([n], k) => {
+    const out = []; let sum = 0;
+    for (let i = 0; i < all.length; i++) {
+      sum += all[i].close; if (i >= n) sum -= all[i - n].close;
+      if (i >= off) out.push(i >= n - 1 ? { time:all[i].time, value:sum / n } : { time:all[i].time });
+    }
+    maS[k].setData(out);
+  });
+}
+async function loadMAHist(seq) {   // 업비트는 한 번에 200개까지라 앞쪽 500개를 3번에 나눠 받음 (to 는 그 시각 앞의 봉)
+  if (isStock(market) || !candles.length) return;
+  let to = candles[0].time, got = [];
+  try {
+    while (got.length < 500) {
+      const iso = new Date((to - KST) * 1000).toISOString().slice(0, 19) + "Z";
+      const arr = await nativeGet(url(200) + "&to=" + encodeURIComponent(iso));
+      if (seq !== loadSeq || !Array.isArray(arr) || !arr.length) break;
+      const part = arr.reverse().map(c => ({ time:kstSec(c.candle_date_time_kst), close:c.trade_price }));
+      got = part.concat(got); to = part[0].time;
+      if (arr.length < 200) break;
+    }
+  } catch (e) {}
+  if (seq !== loadSeq) return;
+  maHist = got; updateMA();
+}
 function calcBB(n = 20, k = 2) {
   const up = [], mid = [], lo = [];
   for (let i = 0; i < candles.length; i++) {
@@ -652,6 +749,7 @@ function notify(title, body) {
 function updateIndicators() {
   if (!candles.length) return;
   const bb = calcBB(); bbUp.setData(bb.up); bbMid.setData(bb.mid); bbLo.setData(bb.lo);
+  updateMA();
   const rsi = calcRSI();
   rsiS.setData(candles.map((c,i) => rsi[i] == null ? { time:c.time } : { time:c.time, value:rsi[i] }));
   const st = calcStoch();
@@ -736,13 +834,14 @@ async function load(silent) {
         low:c.low_price, close:c.trade_price, volume:c.candle_acc_trade_volume }));
     }
     if (seq !== loadSeq) return;
+    maHist = isStock(market) ? stockHist : [];
     candles = got;
     const prec = market.startsWith("USDT-") || (candles.length && candles[candles.length-1].close < 100) ? 2 : 0;
     cs.applyOptions({ priceFormat:{ type:"price", precision:prec, minMove: prec ? 0.01 : 1 } });
     cs.setData(candles);
     vs.setData(candles.map(volBar));
     drawTrend(); updateIndicators();
-    if (!silent) chart.timeScale().fitContent();
+    if (!silent) { chart.timeScale().fitContent(); loadMAHist(seq); }
     info.textContent = isStock(market) ? "네이버 증권 · " + new Date().toLocaleTimeString("ko-KR", {hour12:false}) + " 기준" : "업비트 실시간";
   } catch (e) { if (seq === loadSeq) info.textContent = "불러오기 실패: " + e; }
 }
@@ -754,11 +853,12 @@ const p2 = x => String(x).padStart(2, "0");
 function kstYmd(daysBack) { const d = new Date(Date.now() + KST*1000 - daysBack*86400000);
   return `${d.getUTCFullYear()}${p2(d.getUTCMonth()+1)}${p2(d.getUTCDate())}`; }
 const nvTime = s => kstSec(`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(8,10)||"00"}:${s.slice(10,12)||"00"}:00`);
+let stockHist = [];
 async function stockCandles() {
   const code = market.slice(6);
   let rows, out = [];
   if ("DWM".includes(tf)) {
-    const kind = {D:"day", W:"week", M:"month"}[tf], days = {D:420, W:1600, M:7000}[tf];
+    const kind = {D:"day", W:"week", M:"month"}[tf], days = {D:1100, W:5000, M:7000}[tf];   // 500일선이 나오게 넉넉히
     rows = await nativeGet(`${NAVER}${code}/${kind}?startDateTime=${kstYmd(days)}0000&endDateTime=${kstYmd(0)}2359`);
     if (!Array.isArray(rows)) throw new Error(JSON.stringify(rows));
     out = rows.map(r => ({ time:nvTime(r.localDate), open:r.openPrice, high:r.highPrice, low:r.lowPrice, close:r.closePrice, volume:r.accumulatedTradingVolume }));
@@ -774,6 +874,7 @@ async function stockCandles() {
       } else out.push({ time:t, open:r.openPrice, high:r.highPrice, low:r.lowPrice, close:r.currentPrice, volume:r.accumulatedTradingVolume });
     }
   }
+  stockHist = out.slice(0, -200);   // 이동평균 계산용 앞쪽 봉
   return out.slice(-200);
 }
 // 시세 카드: 장중(넥스트레이드 포함)엔 10초, 장 마감 뒤엔 60초마다
@@ -1532,7 +1633,7 @@ placeEcon(); econTicker(); econFetch(false);
 }
 
 
-{ // ---------- 차트 아래 시장 지표, 서울 날씨 ----------
+{ // ---------- 차트 아래 시장 지표, 환율과 금 ----------
 // 공포탐욕지수(alternative.me, 하루 한 번 바뀜), 바이낸스 선물 BTCUSDT 롱숏 비율·펀딩비·미결제약정, 김치 프리미엄(업비트 원화가 ÷ 바이낸스 달러가 × 원달러 환율)
 const indEl = document.getElementById("ind");
 const FG_KO = { "Extreme Fear":"극단적 공포", "Fear":"공포", "Neutral":"중립", "Greed":"탐욕", "Extreme Greed":"극단적 탐욕" };
@@ -1552,7 +1653,8 @@ indEl.innerHTML = `<div class="irows"><div class="irow">${[
   card("i-nq", "나스닥", "미국 나스닥 종합지수 (네이버 증권). 비트코인과 같이 움직이는 경우가 많음"),
   card("i-dxy", "달러 인덱스", "주요 6개 통화 대비 달러 가치 (네이버 증권, 10분 지연). 달러가 강하면 보통 코인에 불리"),
 ].join("")}</div></div>` +
-  `<div class="ic iwx" id="i-wx" title="서울 날씨 (Open-Meteo)"><div class="it">서울 날씨</div><div class="wnow">불러오는 중</div><div class="whr"></div></div>`;
+  `<div class="ic ifx" id="i-fx" title="네이버 증권. 원달러·엔화는 하나은행 고시 환율, 국제 금은 뉴욕 COMEX 선물(10분 지연), 국내 금은 한국거래소 1g">` +
+  [["usd", "원달러"], ["jpy", "엔화 100엔"], ["gold", "국제 금"], ["kgold", "국내 금"]].map(([k, n]) => `<div class="fr" data-k="${k}"><span class="fn">${n}</span><b class="fv">불러오는 중</b><small class="fc"></small></div>`).join("") + `</div>`;
 const set = (id, v, s, extra) => { const c = document.getElementById(id); c.querySelector(".iv").innerHTML = v; c.querySelector(".is").innerHTML = s || "";
   const g = c.querySelector(".gbar"); if (g) g.remove(); if (extra) c.insertAdjacentHTML("beforeend", extra); };
 const fail = id => set(id, `<span class="flat">받기 실패</span>`, "잠시 뒤 다시 시도");
@@ -1638,24 +1740,24 @@ async function indNaver(id, url, unit) {
     set(id, `${d.closePrice}${unit}<small class="${cls(r)}">${sgn(r, 2)}%</small>`, `${d.marketStatus === "OPEN" ? "장중" : "현지"} ${t}`);
   } catch (e) { fail(id); }
 }
-const WMO = c => c === 0 ? ["☀️","맑음"] : c === 1 ? ["🌤️","대체로 맑음"] : c === 2 ? ["⛅","구름 조금"] : c === 3 ? ["☁️","흐림"] : c <= 48 ? ["🌫️","안개"]
-  : c <= 57 ? ["🌦️","이슬비"] : c <= 67 ? ["🌧️","비"] : c <= 77 ? ["🌨️","눈"] : c <= 82 ? ["🌦️","소나기"] : c <= 86 ? ["🌨️","눈 소나기"] : ["⛈️","뇌우"];
-async function indWx() {
-  const el = document.getElementById("i-wx");
-  try {
-    const d = await nativeGet("https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m,weather_code,apparent_temperature&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=2");
-    const c = d.current, w = WMO(c.weather_code), now = c.time.slice(0, 13);
-    el.querySelector(".wnow").innerHTML = `<span class="wico">${w[0]}</span><span class="wtmp">${Math.round(c.temperature_2m)}°</span>` +
-      `<span class="wtx">${w[1]} · 체감 ${Math.round(c.apparent_temperature)}°<br>최고 ${Math.round(d.daily.temperature_2m_max[0])}° 최저 ${Math.round(d.daily.temperature_2m_min[0])}°</span>`;
-    const i0 = Math.max(0, d.hourly.time.findIndex(t => t.slice(0, 13) === now));
-    el.querySelector(".whr").innerHTML = d.hourly.time.slice(i0, i0 + 12).map((t, i) =>
-      `<div class="wh">${i ? +t.slice(11, 13) + "시" : "지금"}<br>${WMO(d.hourly.weather_code[i0 + i])[0]}<b>${Math.round(d.hourly.temperature_2m[i0 + i])}°</b></div>`).join("");
-  } catch (e) { el.querySelector(".wnow").innerHTML = `<span class="flat">받기 실패</span>`; }
+// 환율과 금: 네이버 증권 (원달러, 100엔, 국제 금 달러/온스, 국내 금 원/g)
+const FX = { usd:["exchange/FX_USDKRW", "원"], jpy:["exchange/FX_JPYKRW", "원"], gold:["metals/GCcv1", "$"], kgold:["metals/M04020000", "원/g"] };
+async function indFx() {   // 환율은 응답의 exchangeInfo 안에 값이 있고, 금은 바로 있음
+  await Promise.all(Object.entries(FX).map(async ([k, [path, unit]]) => {
+    const r = document.querySelector(`#i-fx .fr[data-k="${k}"]`);
+    try {
+      const g = await nativeGet("https://api.stock.naver.com/marketindex/" + path), d = g.exchangeInfo || g, v = d.closePrice, c = +d.fluctuationsRatio;
+      if (!v) throw 0;
+      r.querySelector(".fv").textContent = unit === "$" ? "$" + v : v + unit;
+      const fc = r.querySelector(".fc"); fc.className = "fc " + cls(c); fc.textContent = `${sgn(c, 2)}%`;
+      r.title = `${d.name || k} · ${(d.localTradedAt || "").slice(5, 16).replace("T", " ").replace("-", "/")} 기준${d.delayTimeName ? " · " + d.delayTimeName : ""}`;
+    } catch (e) { r.querySelector(".fv").innerHTML = `<span class="flat">받기 실패</span>`; r.querySelector(".fc").textContent = ""; }
+  }));
 }
 const indAll = () => { indLS("i-ls", "globalLongShortAccountRatio"); indLS("i-top", "topLongShortPositionRatio"); indFund(); indOI(); indKP(); indCBP();
-  indNaver("i-nq", "https://api.stock.naver.com/index/.IXIC/basic", ""); indNaver("i-dxy", "https://api.stock.naver.com/marketindex/exchange/.DXY", ""); };
-indFG(); indAll(); indMVRV(); indDom(); indWx();
-setInterval(indAll, 60e3); setInterval(indFG, 10 * 60e3); setInterval(indMVRV, 6 * 3600e3); setInterval(indDom, 5 * 60e3); setInterval(indWx, 15 * 60e3);
+  indNaver("i-nq", "https://api.stock.naver.com/index/.IXIC/basic", ""); indNaver("i-dxy", "https://api.stock.naver.com/marketindex/exchange/.DXY", ""); indFx(); };
+indFG(); indAll(); indMVRV(); indDom();
+setInterval(indAll, 60e3); setInterval(indFG, 10 * 60e3); setInterval(indMVRV, 6 * 3600e3); setInterval(indDom, 5 * 60e3);
 }
 
 { // ---------- 그리기 도구 (업비트 차트 도구처럼) ----------
@@ -1690,14 +1792,54 @@ const pal = Object.assign(document.createElement("div"), { id:"drawPal" });
 pal.innerHTML = TOOLS.map(([k, n, , svg]) => `<button data-k="${k}" title="${n}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join("");
 wrapEl.appendChild(pal);
 const drawBtn = Object.assign(document.createElement("button"), { id:"drawBtn", textContent:"✏️ 그리기", title:"선, 도형, 피보나치 그리기" });
-const alertBtn = Object.assign(document.createElement("button"), { id:"alertBtn", textContent:"🔔 알림", title:"차트를 눌러 그 가격에 알림 걸기. 실시간 가격이 닿으면 바탕화면 알림" });
+const alertBtn = Object.assign(document.createElement("button"), { id:"alertBtn", textContent:"🔔 알림", title:"원하는 가격을 넣어 알림 걸기. 로그인 없이 업비트 공개 시세로 확인하고, 가격이 닿으면 바탕화면 알림" });
 bar.insertBefore(drawBtn, info); bar.insertBefore(alertBtn, info);
 const D = { mk:null, list:[], tool:null, draft:null, sel:null, drag:null, hover:null };
+// 그림을 누르면 옆에 뜨는 단추 (삭제)
+const selBar = Object.assign(document.createElement("div"), { id:"drawSel" });
+selBar.innerHTML = `<button class="del" title="고른 그림 지우기 (Delete 키도 됨)">🗑 삭제</button>`;
+wrapEl.appendChild(selBar);
+["mousedown", "pointerdown"].forEach(t => selBar.addEventListener(t, e => e.stopPropagation(), true));
+function delSel() {
+  if (!D.sel) return;
+  if (D.sel.k === "alert") { (ALERTS[market] || []).splice(D.sel.ai, 1); saveAlerts(); }
+  else { D.list = D.list.filter(d => d !== D.sel); saveList(); }
+  D.sel = null; redraw();
+}
+selBar.querySelector(".del").onclick = delSel;
+function placeSel() {   // 고른 그림의 오른쪽 위에 단추를 둠 (선 하나짜리는 누른 자리 근처)
+  const d = D.sel;
+  if (!d || D.drag || D.draft) { selBar.classList.remove("show"); return; }
+  let x, y;
+  if (d.k === "hline" || d.k === "alert") { const yy = yOf(d.k === "alert" ? ((ALERTS[market] || [])[d.ai] || {}).price : d.p[0].p); if (yy == null) { selBar.classList.remove("show"); return; } x = (D.clickX || plotW() / 2) + 10; y = yy - 34; }
+  else {
+    const P = (d._hit && d._hit.fill) || d._P || [];
+    if (!P.length) { selBar.classList.remove("show"); return; }
+    x = Math.max(...P.map(q => q.x)) + 8; y = Math.min(...P.map(q => q.y)) - 34;
+    if (d._circ) { x = d._circ.x + d._circ.r + 8; y = d._circ.y - d._circ.r - 34; }
+  }
+  const W = plotW(), bw = selBar.offsetWidth || 70;
+  x = Math.max(4, Math.min(W - bw - 4, x)); y = Math.max(4, Math.min(plotH() - 34, y));
+  selBar.style.left = x + "px"; selBar.style.top = y + "px"; selBar.classList.add("show");
+}
 const keyOf = m => "mjDraw:" + m;
 function loadList() { D.mk = market; D.sel = null; D.draft = null; try { D.list = JSON.parse(localStorage.getItem(keyOf(market))) || []; } catch (e) { D.list = []; } }
 function saveList() { try { if (D.list.length) localStorage.setItem(keyOf(D.mk), JSON.stringify(D.list)); else localStorage.removeItem(keyOf(D.mk)); } catch (e) {} }
 let ALERTS = {}; try { ALERTS = JSON.parse(localStorage.getItem("mjAlerts")) || {}; } catch (e) {}
-const saveAlerts = () => { try { localStorage.setItem("mjAlerts", JSON.stringify(ALERTS)); } catch (e) {} };
+const saveAlerts = () => { try { localStorage.setItem("mjAlerts", JSON.stringify(ALERTS)); } catch (e) {} renderAlertList(); };
+// 모든 종목의 알림을 한 줄에 모아 보임. 이름을 누르면 그 종목으로 가고, ✕ 는 그 알림 지우기
+const alertListEl = document.getElementById("alertList");
+function renderAlertList() {
+  const items = [];
+  Object.entries(ALERTS).forEach(([code, arr]) => (arr || []).forEach((a, i) => items.push({ code, a, i })));
+  alertListEl.innerHTML = `<span class="ah">🔔 가격 알림 ${items.length ? items.length + "개" : "없음"}</span>` + items.map(({ code, a, i }) =>
+    `<span class="al${a.fired ? " done" : ""}" data-c="${code}" title="${a.fired ? "이미 울린 알림" : "누르면 이 종목 차트로"}"><span>${(COINS.find(c => c[0] === code) || [code, code])[1]} <span class="${a.dir === "up" ? "u" : "d"}">${a.dir === "up" ? "▲" : "▼"} ${fmtIn(code, a.price)}</span>${a.fired ? " 울림" : ""}</span><button data-c="${code}" data-i="${i}" title="알림 지우기">✕</button></span>`).join("");
+}
+alertListEl.addEventListener("click", e => {
+  const x = e.target.closest("button[data-i]");
+  if (x) { const arr = ALERTS[x.dataset.c] || []; arr.splice(+x.dataset.i, 1); if (!arr.length) delete ALERTS[x.dataset.c]; saveAlerts(); redraw(); if (aPop.classList.contains("show")) aList(); return; }
+  const c = e.target.closest(".al"); if (c && c.dataset.c !== market) { const t = document.getElementById("c-" + c.dataset.c); if (t) t.click(); }
+});
 function setTool(k) {
   D.tool = D.tool === k ? null : k; D.draft = null;
   pal.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.k === D.tool));
@@ -1706,7 +1848,50 @@ function setTool(k) {
   redraw();
 }
 drawBtn.onclick = () => { const on = !pal.classList.contains("show"); pal.classList.toggle("show", on); drawBtn.classList.toggle("on", on); if (!on && D.tool && D.tool !== "alert") setTool(null); };
-alertBtn.onclick = () => setTool("alert");
+// 알림 창: 가격을 직접 넣거나 지금 가격 기준 3%씩 올리고 내림 (부장님 지정 2026-11-17)
+const aPop = Object.assign(document.createElement("div"), { id:"alertPop" });
+aPop.innerHTML = `<div class="ttl"></div><div class="cur"></div>
+  <div class="row"><button class="dn" data-s="-1">−3%</button><input inputmode="decimal"><button class="up" data-s="1">+3%</button></div>
+  <div class="pct"></div><button class="add">알림 추가</button><div class="list"></div>`;
+document.body.appendChild(aPop);
+const aIn = aPop.querySelector("input");
+const coinName = c => (COINS.find(x => x[0] === c) || [c, c])[1];
+function aPct() {
+  const v = parseNum(aIn.value), cur = PRICES[market];
+  aPop.querySelector(".pct").textContent = isFinite(v) && cur ? `지금보다 ${v >= cur ? "+" : ""}${((v / cur - 1) * 100).toFixed(1)}% ${v >= cur ? "오르면" : "내리면"} 알림` : "";
+}
+function aList() {
+  const arr = ALERTS[market] || [];
+  aPop.querySelector(".list").innerHTML = arr.length ? arr.map((x, i) => `<div class="it"><span class="${x.fired ? "done" : ""}">${x.dir === "up" ? "▲" : "▼"} ${fmtIn(market, x.price)} ${x.dir === "up" ? "이상" : "이하"}${x.fired ? " (울림)" : ""}</span><button data-i="${i}">삭제</button></div>`).join("") : `<div class="none">걸린 알림 없음</div>`;
+}
+function aOpen() {
+  const cur = PRICES[market];
+  aPop.querySelector(".ttl").textContent = `가격 알림: ${coinName(market)}`;
+  aPop.querySelector(".cur").textContent = cur != null ? `지금 ${fmtIn(market, cur)}` : "가격을 받는 중";
+  aIn.value = cur != null ? fmtIn(market, cur) : "";
+  aPct(); aList();
+  const r = alertBtn.getBoundingClientRect();
+  aPop.style.left = Math.max(8, Math.min(innerWidth - 280, r.left)) + "px"; aPop.style.top = (r.bottom + 6) + "px";
+  aPop.classList.add("show"); alertBtn.classList.add("on"); aIn.focus(); aIn.select();
+}
+const aClose = () => { aPop.classList.remove("show"); alertBtn.classList.remove("on"); };
+alertBtn.onclick = () => aPop.classList.contains("show") ? aClose() : aOpen();
+aIn.oninput = aPct;
+aPop.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const cur = PRICES[market];
+  if (b.dataset.s) {   // 지금 가격의 3% 만큼 더하고 뺌 (누를 때마다 3%씩)
+    const v = parseNum(aIn.value), base = isFinite(v) ? v : cur; if (!cur || !isFinite(base)) return;
+    aIn.value = fmtIn(market, roundP(base + Number(b.dataset.s) * cur * 0.03)); aPct();
+  } else if (b.classList.contains("add")) {
+    const v = parseNum(aIn.value); if (!isFinite(v) || v <= 0) { aIn.focus(); return; }
+    addAlert(v); aList(); redraw();
+  } else if (b.dataset.i != null) {
+    (ALERTS[market] || []).splice(+b.dataset.i, 1); saveAlerts(); aList(); redraw();
+  }
+});
+aIn.addEventListener("keydown", e => { if (e.key === "Enter") aPop.querySelector(".add").click(); if (e.key === "Escape") aClose(); });
+document.addEventListener("mousedown", e => { if (aPop.classList.contains("show") && !aPop.contains(e.target) && e.target !== alertBtn) aClose(); }, true);
 pal.onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
   const k = b.dataset.k;
@@ -1856,6 +2041,7 @@ function redraw() {
     }
   }
   dg.restore();
+  placeSel();
 }
 // ----- 맞추기(클릭 판정) -----
 function distSeg(p, a, b) { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy; let t = L2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy); }
@@ -1902,7 +2088,7 @@ function finish(d) {
 }
 const block = e => { e.stopPropagation(); e.preventDefault(); };
 wrapEl.addEventListener("mousedown", e => {
-  if (e.button !== 0 || e.target.closest("#drawPal") || e.target.classList.contains("drawTxt")) return;
+  if (e.button !== 0 || e.target.closest("#drawPal, #drawSel") || e.target.classList.contains("drawTxt")) return;   // 도구판, 삭제 단추, 글자 칸은 그대로 둠
   const m = evPt(e); if (!m) return;
   if (m.x > plotW() || m.y > plotH()) return;   // 오른쪽 가격 눈금과 아래 보조지표 칸은 차트가 쓰게 둠
   if (D.tool) {
@@ -1921,6 +2107,7 @@ wrapEl.addEventListener("mousedown", e => {
   }
   const hit = hitTest(m);
   if (!hit) { if (D.sel) { D.sel = null; redraw(); } return; }
+  D.clickX = m.x;
   block(e);
   if (hit.d.k === "alert") { D.sel = hit.d; D.drag = { d:hit.d, h:-1, m0:m, alert:true }; redraw(); return; }
   D.sel = hit.d;
@@ -1946,15 +2133,11 @@ window.addEventListener("mousemove", e => {
   else g0.d.p = g0.p0.map(q => ({ t:l2t(t2l(q.t) + dl), p:q.p + dp }));
   redraw();
 }, true);
-window.addEventListener("mouseup", () => { if (D.drag) { if (D.drag.alert) saveAlerts(); else saveList(); D.drag = null; } }, true);
+window.addEventListener("mouseup", () => { if (D.drag) { if (D.drag.alert) saveAlerts(); else saveList(); D.drag = null; redraw(); } }, true);
 document.addEventListener("keydown", e => {
   if (e.target.closest && e.target.closest("input, textarea")) return;
   if (e.key === "Escape" && (D.tool || D.draft)) { setTool(null); return; }
-  if ((e.key === "Delete" || e.key === "Backspace") && D.sel) {
-    if (D.sel.k === "alert") { (ALERTS[market] || []).splice(D.sel.ai, 1); saveAlerts(); }
-    else { D.list = D.list.filter(d => d !== D.sel); saveList(); }
-    D.sel = null; redraw(); e.preventDefault();
-  }
+  if ((e.key === "Delete" || e.key === "Backspace") && D.sel) { delSel(); e.preventDefault(); }
 });
 // ----- 가격 알림: 실시간 가격이 선을 넘으면 알림 (모든 종목) -----
 const _setCardA = setCard;
@@ -1970,12 +2153,42 @@ setCard = function (code, price, rate, change) {
       notify(`MJ코인 가격 알림: ${name}`, `${fmtIn(code, a.price)} ${a.dir === "up" ? "이상" : "이하"} 도달 (지금 ${fmtIn(code, p)})`);
     }
   }
-  if (hit) { saveAlerts(); if (code === market) redraw(); }
+  if (hit) { saveAlerts(); if (code === market) { redraw(); if (aPop.classList.contains("show")) aList(); } }
 };
 ts.subscribeVisibleLogicalRangeChange(redraw);
 chart.subscribeCrosshairMove(() => { if (!D.draft && !D.drag) redraw(); });
 setInterval(redraw, 250);   // 가격 눈금을 위아래로 끌 때는 알림이 없어서 주기적으로 다시 그림
-loadList(); redraw();
+loadList(); redraw(); renderAlertList();
+}
+
+
+{ // ---------- 버전 표시와 업데이트 (깃허브 릴리스) ----------
+// 파이썬이 켜질 때 window.mjVersion("1.0.0") 을 부름. 그때와 6시간마다 깃허브 최신 릴리스를 물어보고, 새 버전이면 단추를 띄움
+const verTag = Object.assign(document.createElement("span"), { id:"verTag" });
+divInfo.appendChild(verTag);
+const updBtn = Object.assign(document.createElement("button"), { id:"updBtn" });
+bar.insertBefore(updBtn, info);
+const uPend = new Map(); let uId = 0, uInfo = null, busy = false;
+const updCall = op => new Promise(ok => { const id = ++uId; uPend.set(id, ok); window.mjPost(JSON.stringify({ id, update:op }));
+  setTimeout(() => { if (uPend.has(id)) { uPend.delete(id); ok({ st:0, body:{ error:"응답 없음" } }); } }, op === "install" ? 600e3 : 30e3); });
+window.mjUpdateReply = (id, st, body) => { const f = uPend.get(id); uPend.delete(id); let b = {}; try { b = JSON.parse(body); } catch (e) {} if (f) f({ st, body:b }); };
+window.mjUpdateProgress = pct => { if (busy) updBtn.textContent = pct >= 100 ? "다시 켜는 중…" : `받는 중 ${pct}%`; };
+async function check() {
+  const r = await updCall("check");
+  if (r.st !== 200) return;
+  uInfo = r.body;
+  if (uInfo.newer && !busy) { updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; updBtn.title = "누르면 받아서 바꾸고 다시 켭니다"; updBtn.classList.add("show"); }
+}
+updBtn.onclick = async () => {
+  if (!uInfo || busy) return;
+  const mb = uInfo.size ? ` (${(uInfo.size / 1048576).toFixed(0)}MB)` : "";
+  const notes = (uInfo.notes || "").trim();
+  if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n받은 뒤 프로그램이 꺼졌다가 ${navigator.platform.startsWith("Win") ? "설치 화면이 뜹니다" : "새 버전으로 다시 켜집니다"}.`, "업데이트")) return;
+  busy = true; updBtn.disabled = true; updBtn.textContent = "받는 중…";
+  const r = await updCall("install");
+  if (r.st !== 200) { busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; askConfirm("업데이트 실패", r.body.error || "알 수 없는 오류", "확인"); }
+};
+window.mjVersion = v => { verTag.textContent = "v" + v; check(); setInterval(check, 6 * 3600e3); };
 }
 
 refreshTabs(); layout(); load(); stockLoop(); sendSubscribe(); fitXl();

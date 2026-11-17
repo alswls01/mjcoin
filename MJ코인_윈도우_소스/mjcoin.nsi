@@ -1,7 +1,10 @@
 ﻿; MJ코인 설치 파일 (NSIS 3). build_installer.bat 와 깃허브 빌드가 사용
 Unicode true
+!ifndef VERSION
+  !define VERSION "1.0.0"
+!endif
 !include "MUI2.nsh"
-Name "MJ코인"
+Name "MJ코인 ${VERSION}"
 OutFile "dist\MJCoin_Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\MJCoin"
 RequestExecutionLevel user
@@ -18,6 +21,7 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_LANGUAGE "Korean"
 
 Section "MJ코인"
+  Sleep 1500   ; 업데이트로 띄운 경우 프로그램이 완전히 꺼지길 기다림 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없음)
   SetOutPath "$INSTDIR"
   File /r "dist\MJCoin\*.*"
   File "mjcoin.ico"
@@ -28,7 +32,7 @@ Section "MJ코인"
   WriteRegStr HKCU "${UK}" "DisplayName" "MJ코인"
   WriteRegStr HKCU "${UK}" "DisplayIcon" "$INSTDIR\mjcoin.ico"
   WriteRegStr HKCU "${UK}" "Publisher" "kmj"
-  WriteRegStr HKCU "${UK}" "DisplayVersion" "1.0"
+  WriteRegStr HKCU "${UK}" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "${UK}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegDWORD HKCU "${UK}" "NoModify" 1
   WriteRegDWORD HKCU "${UK}" "NoRepair" 1

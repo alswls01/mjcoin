@@ -27,8 +27,7 @@ UA = "MJCoin/1.0"
 # 화면이 요청할 수 있는 주소 (업비트 + 네이버 증권)
 ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/",
            "https://api.alternative.me/", "https://fapi.binance.com/", "https://api.binance.com/",
-           "https://api.bitcoin-data.com/", "https://api.exchange.coinbase.com/", "https://api.coingecko.com/",
-           "https://api.open-meteo.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV, 코인베이스 시세, 도미넌스, 날씨
+           "https://api.bitcoin-data.com/", "https://api.exchange.coinbase.com/", "https://api.coingecko.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV, 코인베이스 시세, 도미넌스 (환율·금은 네이버)
 LOG = os.path.join(DATA, "mjcoin.log")
 SUB = {"codes": list(CODES), "ws": None, "lock": threading.Lock()}   # 화면에서 코인을 추가/빼면 codes가 바뀜
 
@@ -323,6 +322,108 @@ def econ_run(rid, force):
     OUT.call(f"window.mjEconReply({rid}, {st}, {json.dumps(json.dumps(body))})")
 
 
+# ---------- 업데이트 (깃허브 릴리스가 업데이트 서버) ----------
+# 버전은 web/version.txt 한 곳. 깃허브에 v1.0.1 같은 꼬리표를 올리면 빌드가 릴리스에 설치 파일을 붙이고,
+# 프로그램은 켤 때와 6시간마다 최신 릴리스를 물어봄. 새 버전이 있으면 화면에 단추가 뜨고 누르면 받아서 바꿈
+REPO = "alswls01/mjcoin"
+try:
+    with open(os.path.join(BASE, "web", "version.txt"), encoding="utf-8") as _f:
+        APP_VERSION = _f.read().strip() or "0.0.0"
+except Exception:
+    APP_VERSION = "0.0.0"
+UPD = {"info": None}
+
+
+def ver_tuple(v):
+    try:
+        return tuple(int(x) for x in str(v).lstrip("vV").split("-")[0].split("."))
+    except Exception:
+        return (0,)
+
+
+def asset_name():
+    if sys.platform == "win32":
+        return "MJCoin_Setup.exe"
+    import platform
+    return "MJCoin_mac_arm.zip" if platform.machine() == "arm64" else "MJCoin_mac_intel.zip"
+
+
+def upd_get(url, timeout=20):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/vnd.github+json"})
+    return urllib.request.urlopen(req, timeout=timeout, context=globals().get("SSL_CTX"))
+
+
+def update_check():
+    d = json.loads(upd_get(f"https://api.github.com/repos/{REPO}/releases/latest").read().decode("utf-8"))
+    tag = d.get("tag_name", "")
+    a = next((x for x in d.get("assets", []) if x.get("name") == asset_name()), None)
+    info = {"current": APP_VERSION, "latest": tag.lstrip("vV"), "notes": (d.get("body") or "")[:2000],
+            "newer": ver_tuple(tag) > ver_tuple(APP_VERSION) and a is not None,
+            "frozen": bool(getattr(sys, "frozen", False)), "size": a.get("size") if a else 0}
+    UPD["info"] = dict(info, url=a.get("browser_download_url") if a else None)
+    return info
+
+
+def update_install():
+    info = UPD.get("info")
+    if not info or not info.get("newer") or not info.get("url"):
+        raise RuntimeError("받을 새 버전이 없습니다")
+    if not getattr(sys, "frozen", False):
+        raise RuntimeError("소스로 실행 중이라 바꿀 앱이 없습니다. 빌드한 앱에서 업데이트하세요")
+    import tempfile, subprocess
+    tmp = tempfile.mkdtemp(prefix="mjcoin_upd_")
+    path = os.path.join(tmp, asset_name())
+    r = upd_get(info["url"], timeout=60)
+    total, got, last = int(r.headers.get("Content-Length") or info.get("size") or 0), 0, 0
+    with open(path, "wb") as f:
+        while True:
+            b = r.read(262144)
+            if not b:
+                break
+            f.write(b)
+            got += len(b)
+            if total and got * 100 // total >= last + 5:
+                last = got * 100 // total
+                OUT.call(f"window.mjUpdateProgress({last})")
+    if total and got != total:
+        raise RuntimeError(f"받다가 끊겼습니다 ({got}/{total})")
+    log("업데이트 받음:", info["latest"], got, "바이트")
+    if sys.platform == "win32":
+        # 설치 파일을 띄우고 이 프로그램은 끔 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없음)
+        subprocess.Popen([path], creationflags=0x00000008 | 0x00000200, close_fds=True)   # DETACHED_PROCESS | NEW_PROCESS_GROUP
+    else:
+        # 새 앱을 풀고, 이 프로그램이 꺼지길 기다렸다가 앱을 통째로 바꾼 뒤 다시 켜는 스크립트를 따로 돌림
+        app = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", ".."))
+        if not app.endswith(".app"):
+            raise RuntimeError("앱 위치를 찾지 못했습니다: " + app)
+        subprocess.run(["ditto", "-x", "-k", path, tmp], check=True)
+        new = os.path.join(tmp, "MJCoin.app")
+        if not os.path.isdir(new):
+            raise RuntimeError("받은 파일에 MJCoin.app 이 없습니다")
+        sh = os.path.join(tmp, "swap.sh")
+        with open(sh, "w") as f:
+            f.write(f"""#!/bin/bash
+while kill -0 {os.getpid()} 2>/dev/null; do sleep 0.3; done
+rm -rf "{app}.old" && mv "{app}" "{app}.old" && mv "{new}" "{app}" && rm -rf "{app}.old"
+xattr -dr com.apple.quarantine "{app}" 2>/dev/null
+open "{app}"
+""")
+        subprocess.Popen(["/bin/bash", sh], start_new_session=True, close_fds=True)
+    OUT.call("window.mjUpdateProgress(100)")
+    threading.Timer(1.2, lambda: os._exit(0)).start()
+    return {"ok": True}
+
+
+def update_run(rid, op):
+    try:
+        body = update_check() if op == "check" else update_install()
+        st = 200
+    except Exception as e:
+        log("업데이트 오류:", e)
+        st, body = 0, {"error": str(e)}
+    OUT.call(f"window.mjUpdateReply({rid}, {st}, {json.dumps(json.dumps(body))})")
+
+
 # ---------- 화면에서 부르는 함수 ----------
 class Api:
     # 화면에서 온 요청: {"id":..,"url":..} 또는 {"notify":{"title":..,"body":..}}
@@ -349,6 +450,9 @@ class Api:
             return
         if "trade" in req and isinstance(req["trade"], dict) and isinstance(req.get("id"), int):
             threading.Thread(target=trade_run, args=(req["id"], req["trade"]), daemon=True).start()
+            return
+        if "update" in req and isinstance(req.get("id"), int) and req["update"] in ("check", "install"):
+            threading.Thread(target=update_run, args=(req["id"], req["update"]), daemon=True).start()
             return
         if "econ" in req and isinstance(req.get("id"), int):
             threading.Thread(target=econ_run, args=(req["id"], (req["econ"] or {}).get("force") if isinstance(req["econ"], dict) else False), daemon=True).start()
@@ -408,6 +512,7 @@ def on_loaded():
         return
     started = True
     OUT.call("window.mjTradeReady && window.mjTradeReady()")   # 이 판은 주문 기능이 있다고 화면에 알림 (다른 판은 안 불러서 주문 버튼이 안 보임)
+    OUT.call(f"window.mjVersion && window.mjVersion({json.dumps(APP_VERSION)})")   # 화면에 버전 표시, 업데이트 확인 시작
     threading.Thread(target=OUT.loop, daemon=True).start()
     threading.Thread(target=ws_loop, daemon=True).start()
 
@@ -429,7 +534,14 @@ def single_instance():
 if __name__ == "__main__":
     os.makedirs(DATA, exist_ok=True)
     _lock = single_instance()
-    win = webview.create_window("MJ코인", url=HTML, js_api=Api(), width=1024, height=640, min_size=(800, 500))
+    # 시작 창은 거의 정사각형 (차트 아래 지표 두 줄이 있어도 차트가 잘 보이게, 부장님 지정 2026-11-17). 화면이 작으면 화면에 맞춤
+    ww, wh = 1030, 950
+    try:
+        sc = webview.screens[0]
+        ww, wh = min(ww, sc.width - 40), min(wh, sc.height - 60)
+    except Exception as e:
+        log("화면 크기 읽기 실패:", e)
+    win = webview.create_window("MJ코인", url=HTML, js_api=Api(), width=ww, height=wh, min_size=(800, 500))
     OUT.win = win
     win.events.loaded += on_loaded
     webview.start(private_mode=False, storage_path=DATA)

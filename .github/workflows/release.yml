@@ -1,0 +1,106 @@
+# MJ코인 정식 버전 내기: v1.0.1 같은 꼬리표를 올리면 윈도우 설치 파일, 인텔 맥 앱, M 칩 맥 앱을 만들어 릴리스에 붙인다.
+# 프로그램은 이 릴리스(최신)를 보고 업데이트한다. 릴리스 설명은 꼬리표에 적은 글을 그대로 쓴다.
+name: 정식 버전 내기
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: MJ코인_윈도우_소스
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 버전 적기
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          Set-Content -NoNewline -Encoding utf8NoBOM web/version.txt $v
+          "VER=$v" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      # PyInstaller 기본 실행기는 백신에 자주 걸려서 직접 컴파일한다
+      - name: 패키지 설치
+        env:
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-binary pyinstaller pyinstaller
+          python -m pip install -r requirements.txt
+      - name: 프로그램 만들기
+        run: python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py
+      - name: 설치 파일 만들기
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" "/DVERSION=$env:VER" mjcoin.nsi
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win
+          path: MJ코인_윈도우_소스/dist/MJCoin_Setup.exe
+
+  mac:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: intel
+          - runner: macos-15
+            arch: arm
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: MJ코인_맥_소스
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 버전 적기
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          printf "%s" "$v" > web/version.txt
+      - name: 패키지 설치
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: 앱 만들기
+        run: |
+          python -m PyInstaller --noconfirm --windowed --name MJCoin --icon mjcoin_1024.png \
+            --osx-bundle-identifier io.github.kmj.MJCoin --add-data "web:web" \
+            --collect-submodules keyring.backends mj_coin_mac.py
+          file dist/MJCoin.app/Contents/MacOS/MJCoin
+          ditto -c -k --keepParent dist/MJCoin.app "MJCoin_mac_${{ matrix.arch }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-${{ matrix.arch }}
+          path: MJ코인_맥_소스/MJCoin_mac_${{ matrix.arch }}.zip
+
+  release:
+    needs: [windows, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: 릴리스 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --tags --force
+          git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > notes.txt
+          [ -s notes.txt ] || echo "MJ코인 ${GITHUB_REF_NAME#v}" > notes.txt
+          ls -la out
+          gh release create "$GITHUB_REF_NAME" out/MJCoin_Setup.exe out/MJCoin_mac_intel.zip out/MJCoin_mac_arm.zip \
+            --title "MJ코인 ${GITHUB_REF_NAME#v}" --notes-file notes.txt --latest

@@ -1,6 +1,7 @@
 # MJ코인 윈도우 설치 파일을 깃허브의 윈도우 PC에서 만든다.
-# 만든 파일은 "windows-build" 릴리스에 MJCoin_Setup.exe 로 올라간다 (로그인 없이 내려받기 가능).
-name: 윈도우 설치 파일
+# 만든 파일은 "windows-build" 시험판 릴리스에 MJCoin_Setup.exe 로 올라간다 (로그인 없이 내려받기 가능).
+# 시험판 표시(--prerelease)를 붙여서 프로그램 업데이트가 이것을 최신 버전으로 잡지 않게 한다. 정식 버전은 release.yml
+name: 윈도우 시험판
 
 on:
   push:
@@ -57,4 +58,4 @@ jobs:
         run: |
           gh release delete windows-build --yes --cleanup-tag 2>$null
           $global:LASTEXITCODE = 0
-          gh release create windows-build dist/MJCoin_Setup.exe --title "MJ코인 윈도우 설치 파일" --notes "커밋 ${{ github.sha }} 에서 깃허브 윈도우 PC로 만든 설치 파일" --target ${{ github.sha }}
+          gh release create windows-build dist/MJCoin_Setup.exe --prerelease --title "MJ코인 윈도우 시험판" --notes "커밋 ${{ github.sha }} 에서 깃허브 윈도우 PC로 만든 설치 파일" --target ${{ github.sha }}
