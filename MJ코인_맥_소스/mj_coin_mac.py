@@ -322,6 +322,211 @@ def econ_run(rid, force):
     OUT.call(f"window.mjEconReply({rid}, {st}, {json.dumps(json.dumps(body))})")
 
 
+# ---------- AI 견해 (Claude API) ----------
+# 화면이 봉 데이터를 글로 묶어 보내면 여기서 Claude 에게 묻고 답을 돌려줌.
+# API 키는 맥 키체인 / 윈도우 자격 증명 관리자에만 저장 (화면, 파일에는 남기지 않음)
+try:
+    import keyring as _ai_keyring
+except Exception:
+    _ai_keyring = None
+AI_SERVICE = "MJCoin.claude"
+AI_MODEL = "claude-opus-5-5"
+AI_PRICE = (4.0, 20.0)   # claude-opus-5-5 백만 토큰당 달러 (입력, 출력)
+AI_SYSTEM = """너는 암호화폐와 주식 차트를 보는 단기 시세 분석가다. 사용자가 보낸 봉 데이터(1분, 10분, 1시간, 4시간, 일봉)와 참고 지표만 근거로 판단한다.
+데이터에 없는 뉴스, 사건, 숫자를 지어내지 않는다. 확실하지 않은 것은 확실하지 않다고 쓴다.
+판단 순서: 일봉으로 큰 흐름과 위치를 잡고, 4시간과 1시간봉으로 중간 흐름을, 10분과 1분봉으로 최근 한 시간의 힘(거래량, 고점과 저점의 변화, 꼬리)을 본다.
+답은 한국어로, 아래 제목과 순서를 그대로 쓴다. 마크다운 기호(#, *, **, 표)와 줄표(긴 줄표, 짧은 줄표, 문장을 끊는 하이픈)는 쓰지 않는다. 목록이 필요하면 줄을 바꾸고 "·" 로 시작한다. 가격은 데이터와 같은 단위로 쓴다.
+
+■ 지금 상황
+(3~4줄 요약)
+■ 봉별로 본 것
+· 일봉: (한 줄)
+· 4시간봉: (한 줄)
+· 1시간봉: (한 줄)
+· 10분봉: (한 줄)
+· 1분봉: (한 줄)
+■ 앞으로 1~4시간
+방향: 오름 / 내림 / 옆걸음 중 하나, 확신: 낮음 / 보통 / 높음 중 하나
+(이유 2~3줄)
+■ 앞으로 1~6시간
+방향과 확신, 이유 (같은 형식)
+■ 볼 가격
+· 지지: 
+· 저항: 
+· 이 견해가 틀렸다고 볼 가격: 
+■ 조심할 점
+(1~3줄)"""
+
+
+# 구독 계정으로 쓰기: 이 컴퓨터에 깔린 Claude Code(claude) 를 불러 답을 받음. 로그인도 Claude Code 의 공식 로그인 창으로 함
+AI_DIR = os.path.join(DATA, "ai")
+
+
+def ai_cli():
+    import shutil
+    home = os.path.expanduser("~")
+    if sys.platform == "win32":
+        cands = [os.path.join(home, ".local", "bin", "claude.exe"),
+                 os.path.join(os.environ.get("APPDATA", ""), "npm", "claude.cmd"), shutil.which("claude")]
+    else:
+        cands = [os.path.join(home, ".local", "bin", "claude"), os.path.join(home, ".npm-global", "bin", "claude"),
+                 "/usr/local/bin/claude", "/opt/homebrew/bin/claude", os.path.join(home, ".claude", "local", "claude"),
+                 shutil.which("claude")]
+    return next((c for c in cands if c and os.path.isfile(c)), None)
+
+
+def ai_cli_run(args, stdin=None, timeout=30):
+    import subprocess
+    cli = ai_cli()
+    if not cli:
+        raise FileNotFoundError("claude")
+    os.makedirs(AI_DIR, exist_ok=True)
+    env = dict(os.environ)
+    env["PATH"] = os.pathsep.join([os.path.dirname(cli), env.get("PATH", ""), "/usr/local/bin", "/opt/homebrew/bin", "/usr/bin", "/bin"])
+    return subprocess.run([cli] + args, input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                          timeout=timeout, cwd=AI_DIR, env=env, creationflags=0x08000000 if sys.platform == "win32" else 0)
+
+
+def ai_cli_status():
+    if not ai_cli():
+        return {"cli": False, "loggedIn": False}
+    try:
+        p = ai_cli_run(["auth", "status"], timeout=20)
+        d = json.loads(p.stdout or "{}")
+        return {"cli": True, "loggedIn": bool(d.get("loggedIn")), "email": d.get("email") or "", "method": d.get("authMethod") or ""}
+    except Exception as e:
+        log("claude 상태 확인 실패:", e)
+        return {"cli": True, "loggedIn": False}
+
+
+def ai_cli_login():
+    import subprocess
+    cli = ai_cli()
+    if not cli:
+        raise RuntimeError("이 컴퓨터에 Claude Code 가 없습니다")
+    if sys.platform == "win32":
+        subprocess.Popen(f'start "Claude 로그인" cmd /k ""{cli}" auth login"', shell=True)
+    else:
+        q = cli.replace("\\", "\\\\").replace('"', '\\"')
+        subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "\\"{q}\\" auth login"', "-e", 'tell application "Terminal" to activate'])
+    return {"ok": True}
+
+
+def ai_cli_ask(prompt):
+    os.makedirs(AI_DIR, exist_ok=True)
+    sp = os.path.join(AI_DIR, "system.txt")
+    with open(sp, "w", encoding="utf-8") as f:
+        f.write(AI_SYSTEM)
+    try:
+        p = ai_cli_run(["-p", "--model", "opus", "--effort", "high", "--output-format", "json", "--tools", "",
+                        "--setting-sources", "", "--strict-mcp-config", "--no-session-persistence",
+                        "--system-prompt-file", sp], stdin=prompt, timeout=300)
+    except Exception as e:
+        return 0, {"error": "Claude Code 실행 실패: " + str(e)[:200], "charged": False}
+    try:
+        d = json.loads(p.stdout)
+    except Exception:
+        return 0, {"error": "Claude Code 답을 읽지 못했습니다: " + (p.stderr or p.stdout or "")[:300], "charged": False}
+    res = str(d.get("result") or "").strip()
+    if d.get("is_error") or not res:
+        if "login" in res.lower() or "logged in" in res.lower():
+            return 0, {"error": "Claude 계정 로그인이 필요합니다", "needLogin": True, "charged": False}
+        return 0, {"error": "Claude 오류: " + res[:300], "charged": d.get("terminal_reason") != "api_error"}
+    u = d.get("usage") or {}
+    models = list((d.get("modelUsage") or {}).keys())
+    log("AI 견해 받음 (구독):", models, u.get("input_tokens"), u.get("output_tokens"))
+    return 200, {"text": res, "model": (models[0] if models else "opus") + " · 구독 계정", "sub": True,
+                 "in": (u.get("input_tokens") or 0) + (u.get("cache_read_input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0),
+                 "out": u.get("output_tokens") or 0, "cost": round(float(d.get("total_cost_usd") or 0), 4)}
+
+
+def ai_key():
+    if not _ai_keyring:
+        return None
+    try:
+        return _ai_keyring.get_password(AI_SERVICE, "api_key")
+    except Exception as e:
+        log("AI 키 읽기 실패:", e)
+        return None
+
+
+def ai_op(t):
+    op = t.get("op")
+    if op == "status":
+        return 200, dict(ai_cli_status(), hasKey=bool(ai_key()), store=bool(_ai_keyring))
+    if op == "login":
+        return 200, ai_cli_login()
+    if op == "setkey":
+        k = str(t.get("key") or "").strip()
+        if not _ai_keyring:
+            return 0, {"error": "키를 안전하게 저장할 곳(keyring)이 없습니다"}
+        if not k.startswith("sk-ant-") or len(k) < 30:
+            return 0, {"error": "Anthropic API 키는 sk-ant- 로 시작합니다"}
+        _ai_keyring.set_password(AI_SERVICE, "api_key", k)
+        log("AI 키 저장함")
+        return 200, {"hasKey": True}
+    if op == "delkey":
+        try:
+            _ai_keyring.delete_password(AI_SERVICE, "api_key")
+        except Exception:
+            pass
+        return 200, {"hasKey": False}
+    if op != "ask":
+        return 0, {"error": "모르는 요청"}
+    prompt = str(t.get("prompt") or "")[:80000]
+    if len(prompt) < 50:
+        return 0, {"error": "보낼 데이터가 없습니다", "charged": False}
+    key = ai_key()
+    if not key:   # API 키가 없으면 구독 계정(Claude Code) 으로
+        if not ai_cli():
+            return 0, {"error": "이 컴퓨터에 Claude Code 가 없습니다. 설치하고 로그인해 주세요", "needLogin": True, "noCli": True, "charged": False}
+        return ai_cli_ask(prompt)
+    import anthropic
+    client = anthropic.Anthropic(api_key=key, timeout=240.0, max_retries=1)
+    try:
+        r = client.beta.messages.create(
+            model=AI_MODEL, max_tokens=16000,
+            betas=["server-side-fallback-2026-07-01"], fallbacks="default",   # 안전 검사에 걸리면 서버가 다른 모델로 다시 답함
+            output_config={"effort": "high"},
+            system=AI_SYSTEM,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.AuthenticationError:
+        return 0, {"error": "API 키가 맞지 않습니다. 키를 다시 넣어 주세요", "needKey": True, "charged": False}
+    except anthropic.PermissionDeniedError as e:
+        return 0, {"error": "이 키로는 쓸 수 없습니다: " + str(e)[:300], "charged": False}
+    except anthropic.RateLimitError:
+        return 0, {"error": "요청이 너무 많다고 합니다. 잠시 뒤 다시 해 주세요", "charged": False}
+    except anthropic.BadRequestError as e:
+        m = str(e)
+        if "credit balance" in m:
+            return 0, {"error": "Anthropic 계정 잔액이 부족합니다 (console.anthropic.com 에서 충전)", "charged": False}
+        return 0, {"error": "요청 오류: " + m[:300], "charged": False}
+    except anthropic.APIStatusError as e:
+        return 0, {"error": f"Claude 서버 오류 ({e.status_code}). 잠시 뒤 다시 해 주세요", "charged": False}
+    except anthropic.APIConnectionError:
+        return 0, {"error": "Claude 서버에 연결하지 못했습니다 (인터넷 확인)", "charged": False}
+    u = r.usage
+    cost = (u.input_tokens * AI_PRICE[0] + u.output_tokens * AI_PRICE[1]) / 1e6
+    if r.stop_reason == "refusal":
+        return 0, {"error": "AI 가 답을 거절했습니다", "charged": True}
+    text = "".join(b.text for b in r.content if b.type == "text").strip()
+    if not text:
+        return 0, {"error": f"빈 답이 왔습니다 ({r.stop_reason})", "charged": True}
+    log("AI 견해 받음:", r.model, u.input_tokens, u.output_tokens)
+    return 200, {"text": text, "model": r.model, "in": u.input_tokens, "out": u.output_tokens,
+                 "cost": round(cost, 4), "stop": r.stop_reason}
+
+
+def ai_run(rid, t):
+    try:
+        st, body = ai_op(t)
+    except Exception as e:
+        log("AI 오류:", e)
+        st, body = 0, {"error": str(e)[:300], "charged": False}
+    OUT.call(f"window.mjAiReply({rid}, {st}, {json.dumps(json.dumps(body))})")
+
+
 # ---------- 업데이트 (깃허브 릴리스가 업데이트 서버) ----------
 # 버전은 web/version.txt 한 곳. 깃허브에 v1.0.1 같은 꼬리표를 올리면 빌드가 릴리스에 설치 파일을 붙이고,
 # 프로그램은 켤 때와 6시간마다 최신 릴리스를 물어봄. 새 버전이 있으면 화면에 단추가 뜨고 누르면 받아서 바꿈
@@ -354,7 +559,16 @@ def upd_get(url, timeout=20):
 
 
 def update_check():
-    d = json.loads(upd_get(f"https://api.github.com/repos/{REPO}/releases/latest").read().decode("utf-8"))
+    try:
+        d = json.loads(upd_get(f"https://api.github.com/repos/{REPO}/releases/latest").read().decode("utf-8"))
+    except Exception as e:
+        # 깃허브 API 는 IP 마다 시간당 60번까지라 막히면, 최신 릴리스 페이지 주소(…/releases/tag/v1.0.6)로 버전을 알아냄
+        log("릴리스 API 실패, 페이지 주소로 확인:", e)
+        tag = upd_get(f"https://github.com/{REPO}/releases/latest").geturl().rstrip("/").rsplit("/", 1)[-1]
+        if not tag.startswith("v"):
+            raise
+        d = {"tag_name": tag, "body": "", "assets": [{"name": asset_name(), "size": 0,
+             "browser_download_url": f"https://github.com/{REPO}/releases/download/{tag}/{asset_name()}"}]}
     tag = d.get("tag_name", "")
     a = next((x for x in d.get("assets", []) if x.get("name") == asset_name()), None)
     info = {"current": APP_VERSION, "latest": tag.lstrip("vV"), "notes": (d.get("body") or "")[:2000],
@@ -465,6 +679,9 @@ class Api:
             return
         if "trade" in req and isinstance(req["trade"], dict) and isinstance(req.get("id"), int):
             threading.Thread(target=trade_run, args=(req["id"], req["trade"]), daemon=True).start()
+            return
+        if "ai" in req and isinstance(req.get("id"), int) and isinstance(req["ai"], dict):
+            threading.Thread(target=ai_run, args=(req["id"], req["ai"]), daemon=True).start()
             return
         if "update" in req and isinstance(req.get("id"), int) and req["update"] in ("check", "install"):
             threading.Thread(target=update_run, args=(req["id"], req["update"]), daemon=True).start()

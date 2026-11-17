@@ -4,7 +4,7 @@ rem MJ코인 윈도우 exe 만들기 (파이썬 3.10 이상이 설치되어 있�
 cd /d "%~dp0"
 python -m pip install --upgrade -r requirements.txt || goto err
 python version_info.py || goto err
-python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
+python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --collect-submodules keyring.backends --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
 echo.
 echo 완료: dist\MJCoin\MJCoin.exe
 explorer dist

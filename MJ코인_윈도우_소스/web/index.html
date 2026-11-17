@@ -356,6 +356,35 @@
   body.excel.blank #ind { visibility:hidden; }
 
   /* ---------- 그리기 도구 ---------- */
+  /* ---------- AI 견해 창 (차트 오른쪽 30%) ---------- */
+  #wrap { --aiw:clamp(300px, 30%, 560px); }
+  #wrap.ai #chart { right:var(--aiw); }
+  #aiBtn.cool:not(.on) { opacity:.75; }
+  #aiPanel { display:none; position:absolute; top:0; right:0; bottom:0; width:var(--aiw); z-index:7; flex-direction:column;
+    background:var(--panel); border-left:1px solid var(--line); color:var(--text); font-size:13px; }
+  #aiPanel.show { display:flex; }
+  #aiPanel .ah { display:flex; align-items:center; gap:6px; padding:8px 10px; border-bottom:1px solid var(--line); }
+  #aiPanel .ah b { flex:1; font-size:13px; }
+  #aiPanel button { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; font-family:inherit; }
+  #aiPanel button:disabled { opacity:.45; cursor:default; }
+  #aiPanel .ax { border:none; background:transparent; font-size:18px; line-height:1; padding:0 4px; color:var(--dim); }
+  #aiPanel .arow { padding:6px 10px; border-bottom:1px solid var(--line); }
+  #aiPanel .ahist { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:4px; font-size:12px; font-family:inherit; }
+  #aiPanel .abody { flex:1; overflow-y:auto; padding:10px 12px; line-height:1.55; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
+  #aiPanel .atop { color:var(--dim); font-size:11.5px; margin-bottom:4px; }
+  #aiPanel .ahd { font-weight:700; color:var(--accent); margin-top:10px; }
+  #aiPanel .ameta { margin-top:14px; padding-top:8px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; }
+  #aiPanel .adim { color:var(--dim); } #aiPanel .aerr { color:var(--up); }
+  #aiPanel .akey { padding:10px 12px; border-top:1px solid var(--line); font-size:12px; color:var(--dim); line-height:1.5; }
+  #aiPanel .akin { width:100%; box-sizing:border-box; margin:8px 0 6px; padding:6px 8px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; font-family:monospace; }
+  #aiPanel .akbtns { display:flex; gap:6px; margin-top:8px; } #aiPanel .aksave, #aiPanel .alogin { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #aiPanel .altx { white-space:pre-wrap; color:var(--text); } #aiPanel .akeyd { margin-top:10px; } #aiPanel .akeyd summary { cursor:pointer; }
+  #aiPanel .afoot { display:flex; align-items:center; gap:6px; padding:8px 10px; border-top:1px solid var(--line); }
+  #aiPanel .acool { flex:1; color:var(--dim); font-size:12px; }
+  #aiPanel .ago { background:var(--accent); border-color:var(--accent); color:#fff; }
+  body.excel #aiPanel { --panel:#fff; --bg:#fff; --text:#222; --line:#d5d5d5; --dim:#666; --accent:#217346; font-family:"Segoe UI","Malgun Gothic",sans-serif; }
+  body.excel #aiPanel button, body.excel #aiPanel .ahist, body.excel #aiPanel .akin { border-radius:2px; }
+  body.excel.blank #aiPanel { display:none !important; }
   #drawC { position:absolute; inset:0; pointer-events:none; z-index:4; }
   #wrap.drawing, #wrap.drawing * { cursor:crosshair !important; }
   #wrap.drawHover, #wrap.drawHover * { cursor:move !important; }
@@ -443,10 +472,9 @@
   #verPop .vbtns button:disabled { opacity:.5; cursor:default; }
   body.excel #verPop .vb { --panel:#fff; --text:#222; --dim:#666; --line:#d5d5d5; --bg:#f7f7f7; border-radius:2px; font-family:"Malgun Gothic", sans-serif; }
   body.excel #verPop .vbtns button.go { background:#217346; border-color:#217346; }
-  #updBtn { display:none; } #updBtn.show { display:inline-block; }
-  #bar #updBtn { border-color:#22c55e; color:#22c55e; font-weight:700; }
+  #bar #updBtn.new { border-color:#22c55e; color:#22c55e; font-weight:700; }
   #bar #updBtn:disabled { opacity:.7; cursor:default; }
-  body.excel #bar #updBtn { color:#217346; border-color:#217346; }
+  body.excel #bar #updBtn.new { color:#217346; border-color:#217346; }
 </style>
 </head>
 <body>
@@ -1329,6 +1357,7 @@ function askConfirm(title, body, yesText, cls) {
   return new Promise(res => {
     $t("tc-title").textContent = title; $t("tc-body").textContent = body;
     const yes = $t("tc-yes"); yes.textContent = yesText; yes.className = cls || "";
+    $t("tc-no").hidden = yesText === "확인";   // "확인" 만 있는 창은 알림이라 취소 단추를 숨김
     tconfirm.classList.add("show");
     const done = v => { tconfirm.classList.remove("show"); yes.onclick = $t("tc-no").onclick = tconfirm.onclick = null; res(v); };
     yes.onclick = () => done(true); $t("tc-no").onclick = () => done(false);
@@ -2261,7 +2290,10 @@ loadList(); redraw(); renderAlertList();
 // 파이썬이 켜질 때 window.mjVersion("1.0.0") 을 부름. 그때와 6시간마다 깃허브 최신 릴리스를 물어보고, 새 버전이면 단추를 띄움
 const verTag = Object.assign(document.createElement("span"), { id:"verTag" });
 bar.insertBefore(verTag, info.nextSibling);   // info 글자는 계속 덮어쓰여서 그 안이 아니라 옆에 둠
-const updBtn = Object.assign(document.createElement("button"), { id:"updBtn" });
+// 단추는 늘 보임. 누르면 그 자리에서 다시 확인해서, 새 버전이 있으면 받고 없으면 "새 버전이 없습니다"
+const UPD_IDLE = "⬆ 새 버전 받기";
+const updBtn = Object.assign(document.createElement("button"), { id:"updBtn", textContent:UPD_IDLE, title:"눌러서 새 버전이 있는지 확인하고 받기" });
+const updIdle = () => { updBtn.textContent = uInfo && uInfo.newer ? `⬆ 새 버전 ${uInfo.latest}` : UPD_IDLE; updBtn.classList.toggle("new", !!(uInfo && uInfo.newer)); };
 bar.insertBefore(updBtn, info);
 const uPend = new Map(); let uId = 0, uInfo = null, busy = false;
 const WIN = navigator.userAgent.includes("Windows");   // 윈도우 판은 브라우저로 받기
@@ -2271,24 +2303,30 @@ window.mjUpdateReply = (id, st, body) => { const f = uPend.get(id); uPend.delete
 window.mjUpdateProgress = pct => { if (busy) updBtn.textContent = pct >= 100 ? "다시 켜는 중…" : `받는 중 ${pct}%`; };
 async function check() {
   const r = await updCall("check");
-  if (r.st !== 200) return;
+  if (r.st !== 200) return r;
   uInfo = r.body;
-  if (uInfo.newer && !busy) { updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; updBtn.title = "누르면 받아서 바꾸고 다시 켭니다"; updBtn.classList.add("show"); }
+  if (!busy) updIdle();
   if (vp.classList.contains("show")) vpFill();   // 버전 정보 창이 열려 있으면 바로 고침
+  return r;
 }
 updBtn.onclick = async () => {
-  if (!uInfo || busy) return;
+  if (busy) return;
+  busy = true; updBtn.disabled = true; updBtn.textContent = "확인 중…";
+  const c = await check();
+  busy = false; updBtn.disabled = false; updIdle();
+  if (c.st !== 200) { askConfirm("업데이트 확인 실패", (c.body.error || "알 수 없는 오류") + "\n인터넷 연결을 확인하고 잠시 뒤 다시 눌러 주세요.", "확인"); return; }
+  if (!uInfo.newer) { askConfirm("새 버전이 없습니다", `지금 쓰는 v${uInfo.current} 이 최신입니다.`, "확인"); return; }
   const mb = uInfo.size ? ` (${(uInfo.size / 1048576).toFixed(0)}MB)` : "";
   const notes = (uInfo.notes || "").trim();
   if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n${WIN ? "브라우저에서 설치 파일(MJCoin_Setup.exe)을 받습니다. 받은 파일을 실행하면 MJ코인이 꺼지고 새 버전이 설치됩니다." : "받은 뒤 프로그램이 꺼졌다가 새 버전으로 다시 켜집니다."}`, WIN ? "브라우저로 받기" : "업데이트")) return;
-  busy = true; updBtn.disabled = true; updBtn.textContent = WIN ? "브라우저 여는 중…" : "받는 중…";
+  busy = true; updBtn.disabled = true; updBtn.textContent = WIN ? "브라우저 여는 중…" : "받는 중…";   // 위에서 막 확인했으니 바로 받음
   const r = await updCall("install");
   if (r.st === 200 && r.body.browser) {   // 윈도우: 브라우저로 받기만 하고 프로그램은 그대로 켜 둠
-    busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`;
+    busy = false; updBtn.disabled = false; updIdle();
     askConfirm("설치 파일 받는 중", "브라우저에서 받은 MJCoin_Setup.exe 를 실행하세요.\n설치하면 MJ코인이 꺼지고 새 버전으로 바뀝니다.", "확인");
     return;
   }
-  if (r.st !== 200) { busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; askConfirm("업데이트 실패", r.body.error || "알 수 없는 오류", "확인"); }
+  if (r.st !== 200) { busy = false; updBtn.disabled = false; updIdle(); askConfirm("업데이트 실패", r.body.error || "알 수 없는 오류", "확인"); }
 };
 let curVer = "";
 window.mjVersion = v => { curVer = v; verTag.textContent = "v" + v; check(); setInterval(check, 6 * 3600e3); };
@@ -2322,6 +2360,162 @@ document.querySelectorAll("#xl-tabs span").forEach(t => { if (t.textContent === 
 }
 
 refreshTabs(); layout(); load(); stockLoop(); sendSubscribe(); fitXl();
+{ // ---------- AI 견해 (Claude) ----------
+// 누르면 차트 오른쪽 30% 에 창이 열리고, 지금 종목의 1분, 10분, 1시간, 4시간, 일봉을 묶어 파이썬이 Claude 에게 물음.
+// 요금이 나가서 한 번 물으면 10분 동안 다시 못 물음. 받은 답은 localStorage "mjAiHist" 에 남겨 다시 볼 수 있음 (키는 저장 안 함)
+const AI_COOL = 10 * 60e3, AI_KEEP = 50;
+const ls = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let hist = ls("mjAiHist", []), aiAt = +ls("mjAiAt", 0), busy = false, acct = null, shown = 0;
+const aiBtn = Object.assign(document.createElement("button"), { id:"aiBtn", textContent:"🤖 AI 견해", title:"Claude 가 지금 종목의 최근 봉을 보고 앞으로 1~4시간, 1~6시간 견해를 줌 (요금이 나가서 10분에 한 번)" });
+bar.insertBefore(aiBtn, info);
+const wrapE = document.getElementById("wrap");
+const P = Object.assign(document.createElement("div"), { id:"aiPanel" });
+P.innerHTML = `<div class="ah"><b>🤖 AI 어시스턴트</b><button class="ax" title="닫기">×</button></div>
+<div class="arow"><select class="ahist" title="예전 견해 다시 보기"></select></div>
+<div class="abody"></div>
+<div class="akey" hidden><div class="altx"></div>
+<div class="akbtns"><button class="alogin">Claude 로그인</button><button class="arechk">로그인 다 했어요</button></div>
+<details class="akeyd"><summary>API 키로 쓰기 (구독과 따로 요금)</summary><div>console.anthropic.com 키. ${navigator.userAgent.includes("Windows") ? "윈도우 자격 증명 관리자" : "맥 키체인"}에만 저장합니다. 키가 있으면 구독 대신 키로 묻습니다.</div>
+<input type="password" class="akin" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><div class="akbtns"><button class="aksave">키 저장</button><button class="akdel">키 지우기</button></div></details></div>
+<div class="afoot"><span class="acool"></span><button class="akb" title="Claude 계정 연결 보기">👤</button><button class="ago">지금 분석</button></div>`;
+wrapE.appendChild(P);
+const $ = s => P.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const left = () => Math.max(0, aiAt + AI_COOL - Date.now());
+const mmss = ms => `${Math.floor(ms / 60e3)}:${String(Math.floor(ms / 1e3) % 60).padStart(2, "0")}`;
+const tstr = ms => { const d = new Date(ms + KST * 1000); return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}`; };
+// ----- 파이썬 연결 -----
+const aPend = new Map(); let aId = 0;
+window.mjAiReply = (id, st, body) => { const p = aPend.get(id); if (!p) return; aPend.delete(id); let d = {}; try { d = JSON.parse(body); } catch (e) {} st === 200 ? p.ok(d) : p.fail(d); };
+const aiPost = (ai, ms) => new Promise((ok, fail) => {
+  const id = ++aId; aPend.set(id, { ok, fail });
+  window.mjPost(JSON.stringify({ id, ai }));
+  setTimeout(() => { if (aPend.has(id)) { aPend.delete(id); fail({ error:"답이 너무 늦습니다", charged:true }); } }, ms || 15000);
+});
+// ----- 봉 데이터 모으기 -----
+const row = (t, o, h, l, c, v) => `${t} | ${o} | ${h} | ${l} | ${c} | ${+(+v).toFixed(4)}`;
+async function coinData(mk) {
+  const g = async (path, n) => { const a = await nativeGet(`https://api.upbit.com/v1/candles/${path}?market=${mk}&count=${n}`);
+    if (!Array.isArray(a)) throw new Error("업비트 봉 받기 실패");
+    return a.reverse().map(c => row(c.candle_date_time_kst.slice(5, 16).replace("T", " "), c.opening_price, c.high_price, c.low_price, c.trade_price, c.candle_acc_trade_volume)); };
+  const [m1, m10, h1, h4, d1] = await Promise.all([g("minutes/1", 60), g("minutes/10", 6), g("minutes/60", 24), g("minutes/240", 6), g("days", 10)]);
+  return { m1, m10, h1, h4, d1 };
+}
+async function stockData(mk) {
+  const code = mk.slice(6), fmt = t => new Date(t * 1000).toISOString().slice(5, 16).replace("T", " ");
+  const rows = await nativeGet(`${NAVER}${code}/minute?startDateTime=${kstYmd(5)}0000&endDateTime=${kstYmd(0)}2359`);
+  const days = await nativeGet(`${NAVER}${code}/day?startDateTime=${kstYmd(20)}0000&endDateTime=${kstYmd(0)}2359`);
+  if (!Array.isArray(rows) || !Array.isArray(days)) throw new Error("네이버 봉 받기 실패");
+  const one = rows.map(r => ({ t:nvTime(r.localDateTime), o:r.openPrice, h:r.highPrice, l:r.lowPrice, c:r.currentPrice, v:r.accumulatedTradingVolume }));
+  const grp = m => { const out = []; for (const r of one) { const t = r.t - r.t % (m * 60), L = out[out.length - 1];
+      if (L && L.t === t) { L.h = Math.max(L.h, r.h); L.l = Math.min(L.l, r.l); L.c = r.c; L.v += r.v; } else out.push({ ...r, t }); } return out; };
+  const pick = (a, n) => a.slice(-n).map(x => row(fmt(x.t), x.o, x.h, x.l, x.c, x.v));
+  return { m1:pick(one, 60), m10:pick(grp(10), 6), h1:pick(grp(60), 24), h4:pick(grp(240), 6),
+    d1:days.slice(-10).map(r => row(r.localDate.slice(4, 6) + "-" + r.localDate.slice(6, 8), r.openPrice, r.highPrice, r.lowPrice, r.closePrice, r.accumulatedTradingVolume)) };
+}
+function indText() {   // 차트 아래 지표 칸 글 (값이 있는 칸만). 붙은 글이 섞이지 않게 요소마다 띄어 씀
+  return [...document.querySelectorAll("#ind .ic")].map(c => { const k = c.cloneNode(true); k.querySelectorAll(".irf").forEach(x => x.remove());
+    k.querySelectorAll("*").forEach(x => { x.prepend(" "); x.append(" "); }); return k.textContent.replace(/\s+/g, " ").trim(); })
+    .filter(x => x && !/불러오는|실패/.test(x)).join("\n");
+}
+async function buildPrompt(mk, name) {
+  const d = isStock(mk) ? await stockData(mk) : await coinData(mk);
+  const where = isStock(mk) ? "한국 주식 (네이버 증권, 원)" : mk.startsWith("USDT-") ? "업비트 USDT 시장 (가격 단위 USDT)" : mk.startsWith("BTC-") ? "업비트 BTC 시장" : "업비트 원화 시장 (원)";
+  const ind = indText();
+  return `종목: ${name} (${mk}), ${where}
+지금 시각(한국): ${tstr(Date.now())}
+현재가: ${PRICES[mk] != null ? PRICES[mk] : "알 수 없음"}
+열 순서: 시각(한국, 월-일 시:분) | 시가 | 고가 | 저가 | 종가 | 거래량. 각 묶음의 마지막 줄은 아직 끝나지 않은 봉이다.${isStock(mk) ? "\n주식은 장이 열린 시간에만 봉이 있다 (정규장과 넥스트레이드 08:00~20:00)." : ""}
+
+[1분봉, 최근 60개 (최근 한 시간)]
+${d.m1.join("\n")}
+
+[10분봉, 최근 6개 (최근 한 시간)]
+${d.m10.join("\n")}
+
+[1시간봉, 최근 24개]
+${d.h1.join("\n")}
+
+[4시간봉, 최근 6개 (마지막 줄이 지금 시각을 포함한 봉)]
+${d.h4.join("\n")}
+
+[일봉, 최근 10개]
+${d.d1.join("\n")}
+${ind ? "\n[참고 지표 (앱 화면 아래 칸)]\n" + ind + "\n" : ""}
+위 데이터로 지금 상황을 요약하고, 앞으로 1~4시간과 1~6시간 견해를 정해진 형식으로 주세요.`;
+}
+// ----- 화면 -----
+function fillHist() {
+  const sel = $(".ahist");
+  sel.innerHTML = hist.length ? hist.map((h, i) => `<option value="${i}">${tstr(h.at)} · ${esc(h.name)}</option>`).join("") : `<option>아직 받은 견해가 없습니다</option>`;
+  sel.disabled = !hist.length; if (hist.length) sel.value = String(shown);
+}
+function showText(h) {
+  if (!h) { $(".abody").innerHTML = `<div class="adim">아직 받은 견해가 없습니다. 아래 "지금 분석" 을 누르면 지금 종목을 분석합니다.</div>`; return; }
+  const body = esc(h.text).split("\n").map(l => l.startsWith("■") ? `<div class="ahd">${l}</div>` : `<div>${l || "&nbsp;"}</div>`).join("");
+  $(".abody").innerHTML = `<div class="atop">${esc(h.name)} · ${tstr(h.at)} 기준</div>${body}
+    <div class="ameta">${esc(h.model || "")} · 입력 ${h.in || 0} / 출력 ${h.out || 0} 토큰 · ${h.sub ? "추가 요금 없음 (구독 사용량에서 차감)" : "약 $" + (h.cost || 0).toFixed(3)}<br>참고용 견해입니다. 투자 판단과 책임은 본인에게 있습니다.</div>`;
+  $(".abody").scrollTop = 0;
+}
+function msg(t, err) { $(".abody").innerHTML = `<div class="${err ? "aerr" : "adim"}">${esc(t)}</div>` + (hist[shown] ? `<div class="adim" style="margin-top:10px">예전 견해는 위 목록에서 고를 수 있습니다.</div>` : ""); }
+function tick() {
+  const l = left();
+  aiBtn.textContent = busy ? "🤖 분석 중…" : l ? `🤖 AI 견해 ${mmss(l)}` : "🤖 AI 견해";
+  aiBtn.classList.toggle("cool", !!l || busy);
+  $(".acool").textContent = busy ? "분석 중 (30초~2분)" : l ? `다음 분석까지 ${mmss(l)}` : "지금 분석할 수 있음";
+  $(".ago").disabled = busy || !!l;
+}
+setInterval(tick, 1000);
+function setOpen(on) { P.classList.toggle("show", on); wrapE.classList.toggle("ai", on); aiBtn.classList.toggle("on", on); }
+async function acctState(force) {   // 구독 계정(Claude Code) 로그인 상태와 API 키 여부
+  if (!acct || force) { try { acct = await aiPost({ op:"status" }, 30e3); } catch (e) { acct = { cli:false, loggedIn:false, hasKey:false }; } }
+  const t = acct.hasKey ? "API 키로 묻습니다 (따로 요금)." : acct.loggedIn ? `Claude 계정 연결됨: ${acct.email} (구독, 추가 요금 없음)`
+    : acct.cli ? "Claude 계정 로그인이 필요합니다. 아래 단추를 누르면 로그인 창이 뜹니다. 브라우저에서 로그인을 마친 뒤 \"로그인 다 했어요\" 를 눌러 주세요."
+    : "이 컴퓨터에 Claude Code 가 없습니다. 설치한 뒤 로그인하면 구독 계정으로 씁니다 (추가 요금 없음).\n설치: " + (navigator.userAgent.includes("Windows") ? "PowerShell 에서 irm https://claude.ai/install.ps1 | iex" : "터미널에서 curl -fsSL https://claude.ai/install.sh | bash");
+  $(".altx").textContent = t; $(".alogin").hidden = !acct.cli || acct.loggedIn;
+  return acct.loggedIn || acct.hasKey;
+}
+function keyForm(on) { $(".akey").hidden = !on; if (on) acctState(); }
+async function run() {
+  if (busy || left()) return;
+  if (!(await acctState())) { keyForm(true); msg("Claude 계정 연결이 필요합니다."); return; }
+  const mk = market, name = (COINS.find(c => c[0] === mk) || [mk, mk])[1];
+  busy = true; aiAt = Date.now(); lsSet("mjAiAt", aiAt); tick();   // 누른 순간부터 10분 잠금 (요금이 안 나간 실패면 아래에서 풂)
+  msg(`${name} 최근 봉을 모아 Claude 에게 묻는 중입니다. 30초~2분 걸립니다.`);
+  try {
+    const prompt = await buildPrompt(mk, name);
+    const r = await aiPost({ op:"ask", prompt }, 300e3);
+    hist.unshift({ at:aiAt, code:mk, name, text:r.text, model:r.model, sub:!!r.sub, in:r.in, out:r.out, cost:r.cost });
+    hist = hist.slice(0, AI_KEEP); lsSet("mjAiHist", hist); shown = 0; fillHist(); showText(hist[0]);
+  } catch (e) {
+    const d = e instanceof Error ? { error:e.message, charged:false } : e || {};
+    if (d.charged === false) { aiAt = 0; lsSet("mjAiAt", 0); }
+    if (d.needKey || d.needLogin) { acct = null; keyForm(true); }
+    msg("못 받았습니다: " + (d.error || "알 수 없는 오류") + (d.charged === false ? " (요금 안 나감, 바로 다시 할 수 있음)" : ""), true);
+  } finally { busy = false; tick(); }
+}
+aiBtn.onclick = () => {
+  const open = P.classList.contains("show");
+  if (open && (busy || left() || !$(".akey").hidden)) { setOpen(false); return; }   // 열려 있고 더 할 게 없으면 닫기
+  if (!open) { setOpen(true); fillHist(); if (!busy) showText(hist[shown]); }
+  run();
+};
+$(".ax").onclick = () => setOpen(false);
+$(".ago").onclick = run;
+$(".ahist").onchange = e => { shown = +e.target.value; showText(hist[shown]); };
+$(".akb").onclick = () => { keyForm($(".akey").hidden); acctState(true); };
+$(".alogin").onclick = async () => { try { await aiPost({ op:"login" }); $(".altx").textContent = "로그인 창을 띄웠습니다. 브라우저에서 로그인을 마친 뒤 \"로그인 다 했어요\" 를 눌러 주세요."; } catch (d) { msg("로그인 창을 못 띄웠습니다: " + ((d && d.error) || ""), true); } };
+$(".arechk").onclick = async () => { if (await acctState(true)) { keyForm(false); run(); } else msg("아직 로그인되지 않았습니다.", true); };
+$(".aksave").onclick = async () => {
+  const k = $(".akin").value.trim(); $(".akin").value = "";
+  try { await aiPost({ op:"setkey", key:k }); await acctState(true); keyForm(false); run(); }
+  catch (d) { msg("키 저장 실패: " + ((d && d.error) || ""), true); }
+};
+$(".akin").onkeydown = e => { if (e.key === "Enter") $(".aksave").click(); e.stopPropagation(); };
+$(".akdel").onclick = async () => { try { await aiPost({ op:"delkey" }); } catch (e) {} await acctState(true); msg("키를 지웠습니다."); };
+fillHist(); tick();
+}
 </script>
 </body>
 </html>

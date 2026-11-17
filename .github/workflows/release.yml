@@ -37,7 +37,7 @@ jobs:
       - name: 프로그램 만들기
         run: |
           python version_info.py $env:VER
-          python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py
+          python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --collect-submodules keyring.backends --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py
       - name: 설치 파일 만들기
         run: |
           if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }

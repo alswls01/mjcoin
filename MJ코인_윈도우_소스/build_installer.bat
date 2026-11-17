@@ -6,7 +6,7 @@ rem NSIS 가 없으면 winget 으로 설치를 시도함
 cd /d "%~dp0"
 python -m pip install --upgrade -r requirements.txt || goto err
 python version_info.py || goto err
-python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
+python -m PyInstaller --noconfirm --onedir --collect-submodules winrt --collect-submodules keyring.backends --windowed --name MJCoin --icon mjcoin.ico --version-file version_info.txt --add-data "web;web" --add-data "mjcoin.ico;." mj_coin_win.py || goto err
 set "MAKENSIS=%ProgramFiles(x86)%\NSIS\makensis.exe"
 if not exist "%MAKENSIS%" (
   echo NSIS 설치 중...
