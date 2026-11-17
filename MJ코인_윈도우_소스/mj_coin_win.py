@@ -230,6 +230,16 @@ def ai_cli():
     return next((c for c in cands if c and os.path.isfile(c)), None)
 
 
+def ai_token():
+    # 계정 주인이 claude setup-token 으로 만들어 보내 준 1년짜리 연결 코드 (AI 질문만 됨, 비밀번호 아님)
+    if not _ai_keyring:
+        return None
+    try:
+        return _ai_keyring.get_password(AI_SERVICE, "oauth_token")
+    except Exception:
+        return None
+
+
 def ai_cli_run(args, stdin=None, timeout=30):
     import subprocess
     cli = ai_cli()
@@ -238,11 +248,16 @@ def ai_cli_run(args, stdin=None, timeout=30):
     os.makedirs(AI_DIR, exist_ok=True)
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join([os.path.dirname(cli), env.get("PATH", ""), "/usr/local/bin", "/opt/homebrew/bin", "/usr/bin", "/bin"])
+    tok = ai_token()
+    if tok:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
     return subprocess.run([cli] + args, input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace",
                           timeout=timeout, cwd=AI_DIR, env=env, creationflags=0x08000000 if sys.platform == "win32" else 0)
 
 
 def ai_cli_status():
+    if ai_token():
+        return {"cli": bool(ai_cli()), "loggedIn": True, "email": "", "method": "token"}
     if not ai_cli():
         return {"cli": False, "loggedIn": False}
     try:
@@ -260,10 +275,48 @@ def ai_cli_login():
     if not cli:
         raise RuntimeError("이 컴퓨터에 Claude Code 가 없습니다")
     if sys.platform == "win32":
-        subprocess.Popen(f'start "Claude 로그인" cmd /k ""{cli}" auth login"', shell=True)
+        subprocess.Popen(f'start "Claude 로그인" cmd /c ""{cli}" auth login --claudeai"', shell=True)
     else:
         q = cli.replace("\\", "\\\\").replace('"', '\\"')
-        subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "\\"{q}\\" auth login"', "-e", 'tell application "Terminal" to activate'])
+        subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "\\"{q}\\" auth login --claudeai"', "-e", 'tell application "Terminal" to activate'])
+    return {"ok": True}
+
+
+def ai_cli_install():
+    # 공식 설치 명령을 앱이 대신 실행 (관리자 권한 필요 없음). 윈도우는 %USERPROFILE%\\.local\\bin\\claude.exe 에 깔림
+    import subprocess
+    if sys.platform == "win32":
+        cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://claude.ai/install.ps1 | iex"]
+    else:
+        cmd = ["/bin/bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
+    log("Claude Code 설치 시작")
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
+                       creationflags=0x08000000 if sys.platform == "win32" else 0)
+    log("Claude Code 설치 끝:", p.returncode, (p.stdout or "")[-300:], (p.stderr or "")[-300:])
+    return ai_cli()
+
+
+def ai_cli_setup():
+    # "Claude 연결하기" 단추: 없으면 설치하고, 로그인이 안 돼 있으면 공식 로그인 창을 띄움
+    if not ai_cli() and not ai_cli_install():
+        return 0, {"error": "Claude Code 를 설치하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요"}
+    st = ai_cli_status()
+    if not st.get("loggedIn"):
+        ai_cli_login()
+        st["loginOpened"] = True
+    return 200, st
+
+
+def ai_cli_mktoken():
+    import subprocess
+    cli = ai_cli()
+    if not cli:
+        raise RuntimeError("이 컴퓨터에 Claude Code 가 없습니다")
+    if sys.platform == "win32":
+        subprocess.Popen(f'start "연결 코드 만들기" cmd /k ""{cli}" setup-token"', shell=True)
+    else:
+        q = cli.replace("\\", "\\\\").replace('"', '\\"')
+        subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "\\"{q}\\" setup-token"', "-e", 'tell application "Terminal" to activate'])
     return {"ok": True}
 
 
@@ -284,7 +337,7 @@ def ai_cli_ask(prompt):
         return 0, {"error": "Claude Code 답을 읽지 못했습니다: " + (p.stderr or p.stdout or "")[:300], "charged": False}
     res = str(d.get("result") or "").strip()
     if d.get("is_error") or not res:
-        if "login" in res.lower() or "logged in" in res.lower():
+        if any(w in res.lower() for w in ("login", "logged in", "token", "401", "unauthorized", "authenticat")):
             return 0, {"error": "Claude 계정 로그인이 필요합니다", "needLogin": True, "charged": False}
         return 0, {"error": "Claude 오류: " + res[:300], "charged": d.get("terminal_reason") != "api_error"}
     u = d.get("usage") or {}
@@ -311,6 +364,25 @@ def ai_op(t):
         return 200, dict(ai_cli_status(), hasKey=bool(ai_key()), store=bool(_ai_keyring))
     if op == "login":
         return 200, ai_cli_login()
+    if op == "setup":
+        return ai_cli_setup()
+    if op == "mktoken":
+        return 200, ai_cli_mktoken()
+    if op == "settoken":
+        k = str(t.get("token") or "").strip()
+        if not _ai_keyring:
+            return 0, {"error": "코드를 안전하게 저장할 곳(keyring)이 없습니다"}
+        if not k.startswith("sk-ant-oat") or len(k) < 40:
+            return 0, {"error": "연결 코드는 sk-ant-oat 로 시작합니다. 받은 글을 통째로 다시 붙여 넣어 주세요"}
+        _ai_keyring.set_password(AI_SERVICE, "oauth_token", k)
+        log("AI 연결 코드 저장함")
+        return 200, ai_cli_status()
+    if op == "deltoken":
+        try:
+            _ai_keyring.delete_password(AI_SERVICE, "oauth_token")
+        except Exception:
+            pass
+        return 200, ai_cli_status()
     if op == "setkey":
         k = str(t.get("key") or "").strip()
         if not _ai_keyring:
@@ -333,8 +405,8 @@ def ai_op(t):
         return 0, {"error": "보낼 데이터가 없습니다", "charged": False}
     key = ai_key()
     if not key:   # API 키가 없으면 구독 계정(Claude Code) 으로
-        if not ai_cli():
-            return 0, {"error": "이 컴퓨터에 Claude Code 가 없습니다. 설치하고 로그인해 주세요", "needLogin": True, "noCli": True, "charged": False}
+        if not ai_cli() and not ai_cli_install():
+            return 0, {"error": "필요한 프로그램(Claude Code)을 설치하지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요", "charged": False}
         return ai_cli_ask(prompt)
     import anthropic
     client = anthropic.Anthropic(api_key=key, timeout=240.0, max_retries=1)
