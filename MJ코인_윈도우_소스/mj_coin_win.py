@@ -14,7 +14,8 @@ UA = "MJCoin/1.0"
 # 화면이 요청할 수 있는 주소 (업비트 + 네이버 증권)
 ALLOWED = ("https://api.upbit.com/", "https://api.stock.naver.com/", "https://polling.finance.naver.com/",
            "https://api.alternative.me/", "https://fapi.binance.com/", "https://api.binance.com/",
-           "https://api.bitcoin-data.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV
+           "https://api.bitcoin-data.com/", "https://api.exchange.coinbase.com/", "https://api.coingecko.com/",
+           "https://api.open-meteo.com/")   # 공포탐욕지수, 바이낸스 롱숏·펀딩비·미결제약정·시세, MVRV, 코인베이스 시세, 도미넌스, 날씨
 LOG = os.path.join(DATA, "mjcoin.log")
 SUB = {"codes": list(CODES), "ws": None, "lock": threading.Lock()}   # 화면에서 코인을 추가/빼면 codes가 바뀜
 
