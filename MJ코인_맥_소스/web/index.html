@@ -2302,7 +2302,7 @@ const WIN = navigator.userAgent.includes("Windows");   // 윈도우 판은 브�
 const updCall = op => new Promise(ok => { const id = ++uId; uPend.set(id, ok); window.mjPost(JSON.stringify({ id, update:op }));
   setTimeout(() => { if (uPend.has(id)) { uPend.delete(id); ok({ st:0, body:{ error:"응답 없음" } }); } }, op === "install" ? 600e3 : 30e3); });
 window.mjUpdateReply = (id, st, body) => { const f = uPend.get(id); uPend.delete(id); let b = {}; try { b = JSON.parse(body); } catch (e) {} if (f) f({ st, body:b }); };
-window.mjUpdateProgress = pct => { if (busy) updBtn.textContent = pct >= 100 ? "다시 켜는 중…" : `받는 중 ${pct}%`; };
+window.mjUpdateProgress = pct => { if (busy) updBtn.textContent = pct >= 100 ? (WIN ? "설치하고 다시 켜는 중…" : "다시 켜는 중…") : `받는 중 ${pct}%`; };
 async function check() {
   const r = await updCall("check");
   if (r.st !== 200) return r;
@@ -2320,8 +2320,8 @@ updBtn.onclick = async () => {
   if (!uInfo.newer) { askConfirm("새 버전이 없습니다", `지금 쓰는 v${uInfo.current} 이 최신입니다.`, "확인"); return; }
   const mb = uInfo.size ? ` (${(uInfo.size / 1048576).toFixed(0)}MB)` : "";
   const notes = (uInfo.notes || "").trim();
-  if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n${WIN ? "브라우저에서 설치 파일(MJCoin_Setup.exe)을 받습니다. 받은 파일을 실행하면 MJ코인이 꺼지고 새 버전이 설치됩니다." : "받은 뒤 프로그램이 꺼졌다가 새 버전으로 다시 켜집니다."}`, WIN ? "브라우저로 받기" : "업데이트")) return;
-  busy = true; updBtn.disabled = true; updBtn.textContent = WIN ? "브라우저 여는 중…" : "받는 중…";   // 위에서 막 확인했으니 바로 받음
+  if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n${WIN ? "받은 뒤 프로그램이 꺼지고, 옛 버전을 지운 뒤 새 버전을 깔고 다시 켭니다 (30초쯤)." : "받은 뒤 프로그램이 꺼졌다가 새 버전으로 다시 켜집니다."}`, "업데이트")) return;
+  busy = true; updBtn.disabled = true; updBtn.textContent = "받는 중…";   // 위에서 막 확인했으니 바로 받음
   const r = await updCall("install");
   if (r.st === 200 && r.body.browser) {   // 윈도우: 브라우저로 받기만 하고 프로그램은 그대로 켜 둠
     busy = false; updBtn.disabled = false; updIdle();

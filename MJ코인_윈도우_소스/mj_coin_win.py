@@ -506,18 +506,40 @@ def update_check():
 
 
 def update_install():
-    """윈도우는 프로그램이 설치 파일을 직접 받거나 실행하지 않는다 (디펜더가 '내려받아 실행' 동작을 악성으로 봄, 2026-11-17).
-    브라우저로 받기 주소만 열고, 받은 설치 파일은 사용자가 직접 실행한다. 설치 파일이 켜져 있는 MJ코인을 끈다."""
+    """새 설치 파일을 직접 받아 조용히(/S) 실행하고 이 프로그램은 끈다.
+    설치 파일이 켜져 있는 MJ코인을 끄고, 옛 파일을 지운 뒤 새로 깔고, 다 깔리면 MJ코인을 다시 켠다."""
     info = UPD.get("info")
     if not info or not info.get("newer") or not info.get("url"):
         raise RuntimeError("받을 새 버전이 없습니다")
-    import webbrowser
     url = info["url"]
     if not url.startswith(f"https://github.com/{REPO}/releases/download/"):
         raise RuntimeError("받기 주소가 이상합니다: " + url)
-    webbrowser.open(url)
-    log("업데이트 받기 주소를 브라우저로 엶:", info["latest"])
-    return {"ok": True, "browser": True}
+    if not getattr(sys, "frozen", False):
+        raise RuntimeError("소스로 실행 중이라 바꿀 프로그램이 없습니다. 설치한 프로그램에서 업데이트하세요")
+    import tempfile, subprocess
+    tmp = tempfile.mkdtemp(prefix="mjcoin_upd_")
+    path = os.path.join(tmp, "MJCoin_Setup.exe")
+    r = upd_get(url, timeout=60)
+    total, got, last = int(r.headers.get("Content-Length") or info.get("size") or 0), 0, 0
+    with open(path, "wb") as f:
+        while True:
+            b = r.read(262144)
+            if not b:
+                break
+            f.write(b)
+            got += len(b)
+            if total and got * 100 // total >= last + 5:
+                last = got * 100 // total
+                OUT.call(f"window.mjUpdateProgress({last})")
+    if total and got != total:
+        raise RuntimeError(f"받다가 끊겼습니다 ({got}/{total})")
+    if got < 1000000:
+        raise RuntimeError(f"받은 파일이 너무 작습니다 ({got} 바이트)")
+    log("업데이트 받음:", info["latest"], got, "바이트, 조용히 설치 시작")
+    subprocess.Popen([path, "/S"], creationflags=0x00000008 | 0x00000200, close_fds=True, cwd=tmp)   # DETACHED_PROCESS | NEW_PROCESS_GROUP
+    OUT.call("window.mjUpdateProgress(100)")
+    threading.Timer(1.2, lambda: os._exit(0)).start()
+    return {"ok": True}
 
 
 def update_run(rid, op):

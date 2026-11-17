@@ -31,6 +31,9 @@ Section "MJ코인"
   ; 켜져 있는 MJ코인을 끔 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없어 "파일을 열 수 없습니다" 가 뜸)
   nsExec::Exec 'taskkill /F /IM MJCoin.exe'
   Sleep 1500
+  ; 옛 버전 파일을 먼저 지움 (남은 옛 파일이 새 버전과 섞이지 않게). 설정은 %LOCALAPPDATA%\MJCoin 에 있어 그대로 남음
+  Delete "$INSTDIR\MJCoin.exe"
+  RMDir /r "$INSTDIR\_internal"
   SetOutPath "$INSTDIR"
   File /r "dist\MJCoin\*.*"
   File "mjcoin.ico"
@@ -45,6 +48,9 @@ Section "MJ코인"
   WriteRegStr HKCU "${UK}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegDWORD HKCU "${UK}" "NoModify" 1
   WriteRegDWORD HKCU "${UK}" "NoRepair" 1
+  ; 프로그램 안 "새 버전 받기" 로 조용히(/S) 깔았으면 끝나고 바로 다시 켬
+  IfSilent 0 +2
+    Exec '"$INSTDIR\MJCoin.exe"'
 SectionEnd
 
 Section "Uninstall"
