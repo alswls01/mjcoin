@@ -220,53 +220,18 @@ def update_check():
 
 
 def update_install():
+    """윈도우는 프로그램이 설치 파일을 직접 받거나 실행하지 않는다 (디펜더가 '내려받아 실행' 동작을 악성으로 봄, 2026-11-17).
+    브라우저로 받기 주소만 열고, 받은 설치 파일은 사용자가 직접 실행한다. 설치 파일이 켜져 있는 MJ코인을 끈다."""
     info = UPD.get("info")
     if not info or not info.get("newer") or not info.get("url"):
         raise RuntimeError("받을 새 버전이 없습니다")
-    if not getattr(sys, "frozen", False):
-        raise RuntimeError("소스로 실행 중이라 바꿀 앱이 없습니다. 빌드한 앱에서 업데이트하세요")
-    import tempfile, subprocess
-    tmp = tempfile.mkdtemp(prefix="mjcoin_upd_")
-    path = os.path.join(tmp, asset_name())
-    r = upd_get(info["url"], timeout=60)
-    total, got, last = int(r.headers.get("Content-Length") or info.get("size") or 0), 0, 0
-    with open(path, "wb") as f:
-        while True:
-            b = r.read(262144)
-            if not b:
-                break
-            f.write(b)
-            got += len(b)
-            if total and got * 100 // total >= last + 5:
-                last = got * 100 // total
-                OUT.call(f"window.mjUpdateProgress({last})")
-    if total and got != total:
-        raise RuntimeError(f"받다가 끊겼습니다 ({got}/{total})")
-    log("업데이트 받음:", info["latest"], got, "바이트")
-    if sys.platform == "win32":
-        # 설치 파일을 띄우고 이 프로그램은 끔 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없음)
-        subprocess.Popen([path], creationflags=0x00000008 | 0x00000200, close_fds=True)   # DETACHED_PROCESS | NEW_PROCESS_GROUP
-    else:
-        # 새 앱을 풀고, 이 프로그램이 꺼지길 기다렸다가 앱을 통째로 바꾼 뒤 다시 켜는 스크립트를 따로 돌림
-        app = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", ".."))
-        if not app.endswith(".app"):
-            raise RuntimeError("앱 위치를 찾지 못했습니다: " + app)
-        subprocess.run(["ditto", "-x", "-k", path, tmp], check=True)
-        new = os.path.join(tmp, "MJCoin.app")
-        if not os.path.isdir(new):
-            raise RuntimeError("받은 파일에 MJCoin.app 이 없습니다")
-        sh = os.path.join(tmp, "swap.sh")
-        with open(sh, "w") as f:
-            f.write(f"""#!/bin/bash
-while kill -0 {os.getpid()} 2>/dev/null; do sleep 0.3; done
-rm -rf "{app}.old" && mv "{app}" "{app}.old" && mv "{new}" "{app}" && rm -rf "{app}.old"
-xattr -dr com.apple.quarantine "{app}" 2>/dev/null
-open "{app}"
-""")
-        subprocess.Popen(["/bin/bash", sh], start_new_session=True, close_fds=True)
-    OUT.call("window.mjUpdateProgress(100)")
-    threading.Timer(1.2, lambda: os._exit(0)).start()
-    return {"ok": True}
+    import webbrowser
+    url = info["url"]
+    if not url.startswith(f"https://github.com/{REPO}/releases/download/"):
+        raise RuntimeError("받기 주소가 이상합니다: " + url)
+    webbrowser.open(url)
+    log("업데이트 받기 주소를 브라우저로 엶:", info["latest"])
+    return {"ok": True, "browser": True}
 
 
 def update_run(rid, op):

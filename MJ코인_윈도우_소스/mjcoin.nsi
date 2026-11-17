@@ -19,9 +19,18 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "Korean"
+VIProductVersion "${VERSION}.0"
+VIAddVersionKey /LANG=${LANG_KOREAN} "ProductName" "MJ코인"
+VIAddVersionKey /LANG=${LANG_KOREAN} "FileDescription" "MJ코인 설치 프로그램"
+VIAddVersionKey /LANG=${LANG_KOREAN} "CompanyName" "alswls01"
+VIAddVersionKey /LANG=${LANG_KOREAN} "LegalCopyright" "alswls01"
+VIAddVersionKey /LANG=${LANG_KOREAN} "FileVersion" "${VERSION}"
+VIAddVersionKey /LANG=${LANG_KOREAN} "ProductVersion" "${VERSION}"
 
 Section "MJ코인"
-  Sleep 1500   ; 업데이트로 띄운 경우 프로그램이 완전히 꺼지길 기다림 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없음)
+  ; 켜져 있는 MJ코인을 끔 (켜져 있으면 MJCoin.exe 를 덮어쓸 수 없어 "파일을 열 수 없습니다" 가 뜸)
+  nsExec::Exec 'taskkill /F /IM MJCoin.exe'
+  Sleep 1500
   SetOutPath "$INSTDIR"
   File /r "dist\MJCoin\*.*"
   File "mjcoin.ico"
@@ -31,7 +40,7 @@ Section "MJ코인"
   !define UK "Software\Microsoft\Windows\CurrentVersion\Uninstall\MJCoin"
   WriteRegStr HKCU "${UK}" "DisplayName" "MJ코인"
   WriteRegStr HKCU "${UK}" "DisplayIcon" "$INSTDIR\mjcoin.ico"
-  WriteRegStr HKCU "${UK}" "Publisher" "kmj"
+  WriteRegStr HKCU "${UK}" "Publisher" "alswls01"
   WriteRegStr HKCU "${UK}" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "${UK}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegDWORD HKCU "${UK}" "NoModify" 1
@@ -39,6 +48,8 @@ Section "MJ코인"
 SectionEnd
 
 Section "Uninstall"
+  nsExec::Exec 'taskkill /F /IM MJCoin.exe'
+  Sleep 1000
   Delete "$INSTDIR\MJCoin.exe"
   RMDir /r "$INSTDIR\_internal"
   Delete "$INSTDIR\mjcoin.ico"

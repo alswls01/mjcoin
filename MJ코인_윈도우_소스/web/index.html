@@ -2246,6 +2246,7 @@ bar.insertBefore(verTag, info.nextSibling);   // info 글자는 계속 덮어쓰
 const updBtn = Object.assign(document.createElement("button"), { id:"updBtn" });
 bar.insertBefore(updBtn, info);
 const uPend = new Map(); let uId = 0, uInfo = null, busy = false;
+const WIN = navigator.userAgent.includes("Windows");   // 윈도우 판은 브라우저로 받기
 const updCall = op => new Promise(ok => { const id = ++uId; uPend.set(id, ok); window.mjPost(JSON.stringify({ id, update:op }));
   setTimeout(() => { if (uPend.has(id)) { uPend.delete(id); ok({ st:0, body:{ error:"응답 없음" } }); } }, op === "install" ? 600e3 : 30e3); });
 window.mjUpdateReply = (id, st, body) => { const f = uPend.get(id); uPend.delete(id); let b = {}; try { b = JSON.parse(body); } catch (e) {} if (f) f({ st, body:b }); };
@@ -2261,9 +2262,14 @@ updBtn.onclick = async () => {
   if (!uInfo || busy) return;
   const mb = uInfo.size ? ` (${(uInfo.size / 1048576).toFixed(0)}MB)` : "";
   const notes = (uInfo.notes || "").trim();
-  if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n받은 뒤 프로그램이 꺼졌다가 ${navigator.platform.startsWith("Win") ? "설치 화면이 뜹니다" : "새 버전으로 다시 켜집니다"}.`, "업데이트")) return;
-  busy = true; updBtn.disabled = true; updBtn.textContent = "받는 중…";
+  if (!await askConfirm(`새 버전 ${uInfo.latest}`, `지금 ${uInfo.current} → ${uInfo.latest}${mb}\n${notes ? "\n" + notes + "\n" : ""}\n${WIN ? "브라우저에서 설치 파일(MJCoin_Setup.exe)을 받습니다. 받은 파일을 실행하면 MJ코인이 꺼지고 새 버전이 설치됩니다." : "받은 뒤 프로그램이 꺼졌다가 새 버전으로 다시 켜집니다."}`, WIN ? "브라우저로 받기" : "업데이트")) return;
+  busy = true; updBtn.disabled = true; updBtn.textContent = WIN ? "브라우저 여는 중…" : "받는 중…";
   const r = await updCall("install");
+  if (r.st === 200 && r.body.browser) {   // 윈도우: 브라우저로 받기만 하고 프로그램은 그대로 켜 둠
+    busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`;
+    askConfirm("설치 파일 받는 중", "브라우저에서 받은 MJCoin_Setup.exe 를 실행하세요.\n설치하면 MJ코인이 꺼지고 새 버전으로 바뀝니다.", "확인");
+    return;
+  }
   if (r.st !== 200) { busy = false; updBtn.disabled = false; updBtn.textContent = `⬆ 새 버전 ${uInfo.latest}`; askConfirm("업데이트 실패", r.body.error || "알 수 없는 오류", "확인"); }
 };
 let curVer = "";
